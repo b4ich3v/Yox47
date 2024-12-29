@@ -20,7 +20,7 @@ const std::string TOKEN_TYPE_PLUS = "PLUS";
 const std::string TOKEN_TYPE_MULT = "MULT";
 const std::string TOKEN_TYPE_DIV = "DIV";
 
-const char END_SYMBOL = '$';
+const char END_SYMBOL = '\0';
 
 class Error
 {
