@@ -1,17 +1,16 @@
-<expression> ::= <term> (("+" | "-") <term>)*
+<expression> ::= <term> ( (PLUS | MINUS) <term> )*
 
-<term>       ::= <factor> (("*" | "/") <factor>)*
+<term>       ::= <factor> ( (MULT | DIV) <factor> )*
 
-<factor>     ::= ("+" | "-") <factor>
+<factor>     ::= (PLUS | MINUS) <factor>
                | <number>
-               | "(" <expression> ")"
+               | LPAREN <expression> RPAREN
 
-<number>     ::= <int>
-               | <float>
+<number>     ::= INT
+               | FLOAT
 
 <int>        ::= <digit>+
 
 <float>      ::= <digit>+ "." <digit>+
 
 <digit>      ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
-
