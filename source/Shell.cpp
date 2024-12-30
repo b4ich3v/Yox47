@@ -9,7 +9,7 @@ int main()
     {
 
         std::string input;
-        std::cout << "basic > ";
+        std::cout << "Yox47 > ";
         std::getline(std::cin, input);
 
         LexerResult result = run(input);
