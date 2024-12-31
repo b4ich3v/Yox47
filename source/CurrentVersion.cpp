@@ -6,43 +6,51 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
-
-const std::string DIGITS = "0123456789";
-
-const std::string TOKEN_TYPE_INT = "INT";
-const std::string TOKEN_TYPE_FLOAT = "FLOAT";
-const std::string TOKEN_TYPE_LPAREN = "LPAREN";
-const std::string TOKEN_TYPE_RPAREN = "RPAREN";
-const std::string TOKEN_TYPE_MINUS = "MINUS";
-const std::string TOKEN_TYPE_PLUS = "PLUS";
-const std::string TOKEN_TYPE_MULT = "MULT";
-const std::string TOKEN_TYPE_DIV = "DIV";
-const std::string TOKEN_TYPE_EOF = "EOF";
+#include <cmath>
 
 const char END_SYMBOL = '\0';
 
-class Position 
+enum class TokenType
+{
+
+    INT,
+    FLOAT,
+    LPAREN,
+    RPAREN,
+    PLUS,
+    MINUS,
+    MULT,
+    DIV,
+    EOF_TOKEN,
+    NONE
+
+};
+
+class Position
 {
 public:
 
     int index;
     int line;
     int column;
-    std::string fn;
-    std::string ftxt;
+    std::string fileName;   
+    std::string fileText; 
 
-    Position() : index(-1), line(0), column(-1), fn(""), ftxt("") {}
+    Position()
+        : index(-1), line(0), column(-1), fileName(""), fileText("")
+    {}
 
-    Position(int inputIndex, int inputLine, int inputColumn, const std::string& inputFn, const std::string& inputFtxt)
-        : index(inputIndex), line(inputLine), column(inputColumn), fn(inputFn), ftxt(inputFtxt) {}
+    Position(int inputIndex, int inputLine, int inputColumn, const std::string& inputFileName, const std::string& inputFileText)
+        : index(inputIndex), line(inputLine), column(inputColumn), fileName(inputFileName), fileText(inputFileText)
+    {}
 
-    void advance(char current_char = '\0')
+    void advance(char currentChar = '\0')
     {
 
         index += 1;
         column += 1;
 
-        if (current_char == '\n')
+        if (currentChar == '\n')
         {
 
             line += 1;
@@ -52,16 +60,16 @@ public:
 
     }
 
-    Position copy() const 
+    Position copy() const
     {
 
-        return Position(index, line, column, fn, ftxt);
+        return Position(index, line, column, fileName, fileText);
 
     }
 
 };
 
-class Error 
+class Error
 {
 protected:
 
@@ -73,34 +81,49 @@ protected:
 public:
 
     Error() : name(""), details(""), positionStart(), positionEnd() {}
-    Error(const std::string& inputName, const std::string& inputDetails, const Position& start, const Position& end)
-        : name(inputName), details(inputDetails), positionStart(start), positionEnd(end) {}
+
+    Error(const std::string& inputName,
+        const std::string& inputDetails,
+        const Position& start,
+        const Position& end)
+        : name(inputName), details(inputDetails),
+        positionStart(start), positionEnd(end)
+    {}
+
+    virtual ~Error() = default;
 
     virtual std::string asString() const
     {
 
         std::stringstream ss;
-        ss << name << ": " << details << "\n";
-        ss << "File " << positionStart.fn << ", line " << positionStart.line + 1 << ", column " << positionStart.column + 1;
-        ss << "\n\n" << stringWithArrows();
+
+        ss << name << ": " << details << "\n"
+            << "File " << positionStart.fileName
+            << ", line " << (positionStart.line + 1)
+            << ", column " << (positionStart.column + 1)
+            << "\n\n" << stringWithArrows();
+
         return ss.str();
 
     }
 
-    std::string stringWithArrows() const 
+    std::string stringWithArrows() const
     {
 
         std::stringstream ss;
-        std::string text = positionStart.ftxt;
+        std::string text = positionStart.fileText;
         int lineNumber = positionStart.line;
 
         std::vector<std::string> lines;
-        std::stringstream textStream(text);
-        std::string line;
+        {
 
-        while (std::getline(textStream, line, '\n')) lines.push_back(line);
+            std::stringstream textStream(text);
+            std::string line;
+            while (std::getline(textStream, line, '\n')) lines.push_back(line);
+                
+        }
 
-        if (lineNumber >= static_cast<int>(lines.size())) 
+        if (lineNumber < 0 || lineNumber >= (int)lines.size())
         {
 
             ss << "No context available.";
@@ -110,9 +133,10 @@ public:
 
         std::string errorLine = lines[lineNumber];
         ss << errorLine << "\n";
+
         std::string caretLine = "";
 
-        for (int i = 0; i < positionStart.column && i < static_cast<int>(errorLine.size()); i++)
+        for (int i = 0; i < positionStart.column && i < (int)errorLine.size(); i++)
         {
 
             if (errorLine[i] == '\t') caretLine += "\t";
@@ -127,23 +151,67 @@ public:
 
     }
 
+    std::string getName() const { return name; }
+
+    std::string getDetails() const { return details; }
+
+    Position getPosStart() const { return positionStart; }
+
+    Position getPosEnd() const { return positionEnd; }
+
 };
 
-class IllegalCharError : public Error 
+class IllegalCharError : public Error
 {
 public:
 
-    IllegalCharError(const std::string& details, const Position& start, const Position& end)
-        : Error("Illegal Character", details, start, end) {}
+    IllegalCharError(const std::string& inputDetails,
+        const Position& start,
+        const Position& end)
+        : Error("Illegal Character", inputDetails, start, end)
+    {}
 
 };
 
-class InvalidSyntaxError : public Error 
+class InvalidSyntaxError : public Error
 {
 public:
 
-    InvalidSyntaxError(const Position& start, const Position& end, const std::string& details = "")
-        : Error("Invalid Syntax", details, start, end) {}
+    InvalidSyntaxError(const Position& start,
+        const Position& end,
+        const std::string& inputDetails = "")
+        : Error("Invalid Syntax", inputDetails, start, end)
+    {}
+
+};
+
+class RTError : public Error
+{
+public:
+
+    std::string contextName;
+
+    RTError(const std::string& inputName,
+        const std::string& inputDetails,
+        const Position& start,
+        const Position& end)
+        : Error(inputName, inputDetails, start, end),
+        contextName(inputName)
+    {}
+
+    std::string asString() const override
+    {
+        
+        std::stringstream ss;
+
+        ss << name << ": " << details << "\n"
+            << "File " << positionStart.fileName
+            << ", line " << (positionStart.line + 1)
+            << ", column " << (positionStart.column + 1)
+            << "\n\n" << stringWithArrows();
+
+        return ss.str();
+    }
 
 };
 
@@ -151,58 +219,88 @@ class Token
 {
 private:
 
-    std::string type;
-    double value;
+    TokenType type;
+    double value; 
 
 public:
 
     Position positionStart;
     Position positionEnd;
 
-    Token() : type("NONE"), value(0), positionStart(), positionEnd() {}
+    Token()
+        : type(TokenType::NONE), value(0),
+        positionStart(), positionEnd()
+    {}
 
-    Token(const std::string& inputType, double inputValue = 0, const Position& start = Position(), const Position& end = Position())
-        : type(inputType), value(inputValue), positionStart(start), positionEnd(end) {}
+    Token(TokenType inputType,
+        double inputValue,
+        const Position& start,
+        const Position& end)
+        : type(inputType), value(inputValue),
+        positionStart(start), positionEnd(end)
+    {}
 
-    std::string getType() const { return type; }
+    TokenType getType() const { return type; }
 
     double getValue() const { return value; }
 
-    void printToken() const 
+    friend std::ostream& operator << (std::ostream& os, const Token& token)
     {
 
-        if (type == TOKEN_TYPE_INT || type == TOKEN_TYPE_FLOAT) std::cout << type << ":" << value;       
-        else std::cout << type;
-            
-    }
+        switch (token.type) 
+        {
+        case TokenType::INT:
+            os << "INT:" << (int)token.value;
+            break;
+        case TokenType::FLOAT:
+            os << "FLOAT:" << token.value;
+            break;
+        case TokenType::PLUS:
+            os << "PLUS";
+            break;
+        case TokenType::MINUS:
+            os << "MINUS";
+            break;
+        case TokenType::MULT:
+            os << "MULT";
+            break;
+        case TokenType::DIV:
+            os << "DIV";
+            break;
+        case TokenType::LPAREN:
+            os << "LPAREN";
+            break;
+        case TokenType::RPAREN:
+            os << "RPAREN";
+            break;
+        case TokenType::EOF_TOKEN:
+            os << "EOF";
+            break;
+        default:
+            os << "NONE";
+            break;
+        }
 
-    friend std::ostream& operator << (std::ostream& os, const Token& tok)
-    {
-
-        if (tok.type == TOKEN_TYPE_INT || tok.type == TOKEN_TYPE_FLOAT) os << tok.type << ":" << tok.value;  
-        else os << tok.type;
-            
         return os;
 
     }
 
 };
 
-struct LexerResult 
+struct LexerResult
 {
 public:
 
     std::vector<Token> tokens;
     std::unique_ptr<Error> error = nullptr;
 
-    void printTokens() const 
+    void printTokens() const
     {
 
-        for (const auto& token : tokens)
+        for (auto& t : tokens) 
         {
 
-            token.printToken();
-            std::cout << " ";
+            std::cout << t << " ";
 
         }
 
@@ -210,18 +308,251 @@ public:
 
     }
 
-    void printError() const 
+};
+
+class Lexer
+{
+private:
+
+    std::string fileName;
+    std::string text;
+    Position position;
+    char currentChar;
+
+public:
+
+    Lexer(const std::string& inputText,
+        const std::string& fn = "input")
+        : text(inputText),
+        position(-1, 0, -1, fn, inputText),
+        fileName(fn)
     {
 
-        if (error) std::cout << error->asString() << std::endl;
-            
+        advance();
+
+    }
+
+    void advance()
+    {
+
+        position.advance(currentChar);
+
+        if (position.index < (int)text.size()) currentChar = text[position.index];
+        else  currentChar = END_SYMBOL;
+
+    }
+
+    bool isDigit(char c)
+    {
+
+        return (bool)std::isdigit((unsigned char)c);
+
+    }
+
+    Token makeNumber()
+    {
+
+        std::string numStr;
+        int dotCount = 0;
+
+        Position startPos = position.copy();
+
+        while (currentChar != END_SYMBOL &&
+            (isDigit(currentChar) || currentChar == '.'))
+        {
+            if (currentChar == '.') 
+            {
+
+                if (dotCount == 1) break; 
+                dotCount += 1;
+                numStr.push_back('.');
+
+            }
+            else numStr.push_back(currentChar);
+
+            advance();
+
+        }
+
+        TokenType type = TokenType::FLOAT;
+        double value = 0.0;
+
+        try 
+        {
+
+            if (dotCount == 0) 
+            {
+
+                type = TokenType::INT;
+                value = std::stoi(numStr);
+
+            }
+            else 
+            {
+
+                value = std::stod(numStr);
+
+            }
+
+        }
+        catch (const std::invalid_argument&) 
+        {
+
+            Position endPos = position.copy();
+            throw IllegalCharError("Invalid number format: " + numStr,
+                startPos, endPos);
+
+        }
+        catch (const std::out_of_range&) 
+        {
+
+            Position endPos = position.copy();
+            throw IllegalCharError("Number out of range: " + numStr,
+                startPos, endPos);
+
+        }
+
+        return Token(type, value, startPos, position.copy());
+
+    }
+
+    LexerResult makeTokens()
+    {
+
+        LexerResult result;
+
+        try 
+        {
+
+            while (currentChar != END_SYMBOL) 
+            {
+
+                if (currentChar == ' ' || currentChar == '\t' ||
+                    currentChar == '\n' || currentChar == '\r')
+                {
+
+                    advance();
+
+                }
+                else if (isDigit(currentChar))
+                {
+
+                    Token numTok = makeNumber();
+                    result.tokens.push_back(numTok);
+
+                }
+                else if (currentChar == '+') 
+                {
+
+                    Token t(TokenType::PLUS, 0.0, position.copy(), position.copy());
+                    result.tokens.push_back(t);
+                    advance();
+
+                }
+                else if (currentChar == '-') 
+                {
+
+                    Token t(TokenType::MINUS, 0.0, position.copy(), position.copy());
+                    result.tokens.push_back(t);
+                    advance();
+
+                }
+                else if (currentChar == '*')
+                {
+
+                    Token t(TokenType::MULT, 0.0, position.copy(), position.copy());
+                    result.tokens.push_back(t);
+                    advance();
+
+                }
+                else if (currentChar == '/') 
+                {
+
+                    Token t(TokenType::DIV, 0.0, position.copy(), position.copy());
+                    result.tokens.push_back(t);
+                    advance();
+
+                }
+                else if (currentChar == '(') 
+                {
+
+                    Token t(TokenType::LPAREN, 0.0, position.copy(), position.copy());
+                    result.tokens.push_back(t);
+                    advance();
+
+                }
+                else if (currentChar == ')') 
+                {
+
+                    Token t(TokenType::RPAREN, 0.0, position.copy(), position.copy());
+                    result.tokens.push_back(t);
+                    advance();
+
+                }
+                else 
+                {
+
+                    char ch = currentChar;
+                    Position startPos = position.copy();
+                    advance();
+                    Position endPos = position.copy();
+                    result.error = std::make_unique<IllegalCharError>(
+                        std::string(1, ch), startPos, endPos
+                    );
+
+                    return result;
+
+                }
+
+            }
+
+            Token eofToken(TokenType::EOF_TOKEN, 0.0,
+                position.copy(), position.copy());
+            result.tokens.push_back(eofToken);
+
+        }
+        catch (const IllegalCharError& e) 
+        {
+
+            result.error = std::make_unique<IllegalCharError>(
+                e.getDetails(), e.getPosStart(), e.getPosEnd()
+            );
+
+        }
+
+        return result;
+
     }
 
 };
 
-class Node 
+class NumberNode;
+
+class BinaryOperationNode;
+
+class UnaryOperationNode;
+
+class NodeVisitor
 {
 public:
+
+    virtual ~NodeVisitor() {}
+
+    virtual void visit(NumberNode& node) = 0;
+
+    virtual void visit(BinaryOperationNode& node) = 0;
+
+    virtual void visit(UnaryOperationNode& node) = 0;
+
+};
+
+class Node
+{
+public:
+
+    virtual ~Node() = default;
+
+    virtual void accept(NodeVisitor& visitor) = 0;
 
     virtual void printNode() const = 0;
 
@@ -233,9 +564,16 @@ public:
 
     Token token;
 
-    NumberNode(const Token& input) : token(input) {}
+    NumberNode(const Token& t) : token(t) {}
 
-    void printNode() const override 
+    void accept(NodeVisitor& visitor) override
+    {
+
+        visitor.visit(*this);
+
+    }
+
+    void printNode() const override
     {
 
         std::cout << token;
@@ -244,44 +582,62 @@ public:
 
 };
 
-class BinOpNode : public Node
+class BinaryOperationNode : public Node
 {
 public:
 
-    std::shared_ptr<Node> leftNode;
-    Token operationToken;
-    std::shared_ptr<Node> rightNode;
+    std::shared_ptr<Node> left;
+    Token operation;
+    std::shared_ptr<Node> right;
 
-    BinOpNode(const std::shared_ptr<Node>& left, const Token& op, const std::shared_ptr<Node>& right)
-        : leftNode(left), operationToken(op), rightNode(right) {}
+    BinaryOperationNode(const std::shared_ptr<Node>& inputLeft,
+        const Token& tokenOperation,
+        const std::shared_ptr<Node>& inputRight)
+        : left(inputLeft), operation(tokenOperation), right(inputRight)
+    {}
 
-    void printNode() const override 
+    void accept(NodeVisitor& visitor) override
+    {
+
+        visitor.visit(*this);
+
+    }
+
+    void printNode() const override
     {
 
         std::cout << "(";
-        leftNode->printNode();
-        std::cout << ", " << operationToken << ", ";
-        rightNode->printNode();
+        left->printNode();
+        std::cout << ", " << operation << ", ";
+        right->printNode();
         std::cout << ")";
 
     }
 
 };
 
-class UnaryOpNode : public Node 
+class UnaryOperationNode : public Node
 {
 public:
 
-    Token operationToken;
+    Token operation;
     std::shared_ptr<Node> node;
 
-    UnaryOpNode(const Token& op, const std::shared_ptr<Node>& node_)
-        : operationToken(op), node(node_) {}
+    UnaryOperationNode(const Token& tokenOperation, const std::shared_ptr<Node>& inputNode)
+        : operation(tokenOperation), node(inputNode)
+    {}
 
-    void printNode() const override 
+    void accept(NodeVisitor& visitor) override
     {
 
-        std::cout << "(" << operationToken << ", ";
+        visitor.visit(*this);
+
+    }
+
+    void printNode() const override
+    {
+
+        std::cout << "(" << operation << ", ";
         node->printNode();
         std::cout << ")";
 
@@ -296,46 +652,31 @@ public:
     std::shared_ptr<Node> node = nullptr;
     std::unique_ptr<Error> error = nullptr;
 
-    std::shared_ptr<Node> registerNode(const std::shared_ptr<Node>& resultNode)
-    {
-
-        if (resultNode) node = resultNode;
-        return resultNode;
-
-    }
-
-    void registerError(std::unique_ptr<Error> resultNode)
-    {
-
-        if (resultNode) error = std::move(resultNode);
-            
-    }
-
     bool hasError() const 
     {
 
-        return error != nullptr;
+        return (error != nullptr);
 
     }
 
-    void success(const std::shared_ptr<Node>& resultNode) 
+    void success(const std::shared_ptr<Node>& inputNode)
     {
 
-        node = resultNode;
+        node = inputNode;
 
     }
 
-    void failure(std::unique_ptr<Error> resultNode) 
+    void failure(std::unique_ptr<Error> inputError)
     {
 
-        error = std::move(resultNode);
+        inputError = std::move(inputError);
 
     }
 
 };
 
-class ParserClass 
-{ 
+class Parser
+{
 private:
 
     std::vector<Token> tokens;
@@ -344,14 +685,25 @@ private:
 
 public:
 
-    ParserClass(const std::vector<Token>& inputTokens)
-        : tokens(inputTokens), tokenIndex(-1), currentToken() { advance(); }
+    Parser(const std::vector<Token>& inputTokens)
+        : tokens(inputTokens), tokenIndex(-1)
+    {
 
-    void advance() 
+        advance();
+
+    }
+
+    void advance()
     {
 
         tokenIndex += 1;
-        if (tokenIndex < static_cast<int>(tokens.size())) currentToken = tokens[tokenIndex];
+
+        if (tokenIndex < (int)tokens.size())
+        {
+
+            currentToken = tokens[tokenIndex];
+
+        }
 
     }
 
@@ -359,15 +711,16 @@ public:
     {
 
         ParseResult result;
-        auto node = expr(result); 
+        auto rootNode = expr(result);
 
-        if (!result.hasError() && currentToken.getType() != TOKEN_TYPE_EOF) 
+        if (!result.hasError() && currentToken.getType() != TokenType::EOF_TOKEN)
         {
-            
-            return { nullptr, std::make_unique<InvalidSyntaxError>(
-                tokens[tokenIndex].positionStart, tokens[tokenIndex].positionEnd,
+
+            result.failure(std::make_unique<InvalidSyntaxError>(
+                currentToken.positionStart,
+                currentToken.positionEnd,
                 "Expected '+', '-', '*', '/', or EOF"
-            ) };
+            ));
 
         }
 
@@ -377,66 +730,72 @@ public:
 
 private:
 
-    std::shared_ptr<Node> factor(ParseResult& result) 
+    std::shared_ptr<Node> factor(ParseResult& result)
     {
 
-        Token token = currentToken;
+        Token current = currentToken;
 
-        if (token.getType() == TOKEN_TYPE_PLUS || token.getType() == TOKEN_TYPE_MINUS)
-        {
-
-            advance(); 
-            auto factorNode = factor(result);
-            if (result.hasError()) return nullptr;
-            auto node = std::make_shared<UnaryOpNode>(token, factorNode);
-            result.registerNode(node); 
-            return node;
-
-        }
-
-        if (token.getType() == TOKEN_TYPE_INT || token.getType() == TOKEN_TYPE_FLOAT)
-        {
-
-            advance(); 
-            auto node = std::make_shared<NumberNode>(token);
-            result.registerNode(node); 
-            return node;
-
-        }
-
-        if (token.getType() == TOKEN_TYPE_LPAREN) 
+        if (current.getType() == TokenType::PLUS || current.getType() == TokenType::MINUS)
         {
 
             advance();
-            auto exprNode = expr(result);
-
+            auto factorNode = factor(result);
             if (result.hasError()) return nullptr;
 
-            if (currentToken.getType() == TOKEN_TYPE_RPAREN) 
+            auto node = std::make_shared<UnaryOperationNode>(current, factorNode);
+
+            result.success(node);
+            return node;
+
+        }
+        else if (current.getType() == TokenType::INT || current.getType() == TokenType::FLOAT)
+        {
+
+            advance();
+            auto node = std::make_shared<NumberNode>(current);
+
+            result.success(node);
+            return node;
+
+        }
+        else if (current.getType() == TokenType::LPAREN)
+        {
+
+            advance();
+            auto expressionNode = expr(result);
+            if (result.hasError()) return nullptr;
+
+            if (currentToken.getType() == TokenType::RPAREN) 
             {
 
-                advance(); 
-                result.registerNode(exprNode);
-                return exprNode;
-
+                advance();
+ 
+                result.success(expressionNode);
+                return expressionNode;
             }
             else 
             {
-              
-                result.failure(std::make_unique<InvalidSyntaxError>(
-                    currentToken.positionStart, currentToken.positionEnd,
+
+                auto error = std::make_unique<InvalidSyntaxError>(
+                    currentToken.positionStart,
+                    currentToken.positionEnd,
                     "Expected ')'"
-                ));
+                );
+
+                result.failure(std::move(error));
                 return nullptr;
 
             }
 
         }
 
-        result.failure(std::make_unique<InvalidSyntaxError>(
-            token.positionStart, token.positionEnd,
-            "Expected number or '('"
-        ));
+        auto error = std::make_unique<InvalidSyntaxError>(
+            current.positionStart,
+            current.positionEnd,
+            "Expected int, float, +, - или '('"
+        );
+        result.failure(std::move(error));
+
         return nullptr;
 
     }
@@ -447,33 +806,33 @@ private:
         auto left = factor(result);
         if (result.hasError()) return nullptr;
 
-        while (currentToken.getType() == TOKEN_TYPE_MULT || currentToken.getType() == TOKEN_TYPE_DIV)
+        while (currentToken.getType() == TokenType::MULT ||
+            currentToken.getType() == TokenType::DIV)
         {
 
             Token operationToken = currentToken;
             advance();
             auto right = factor(result);
-
             if (result.hasError()) return nullptr;
 
-            auto binaryOperationToken = std::make_shared<BinOpNode>(left, operationToken, right);
-            result.registerNode(binaryOperationToken); 
-            left = binaryOperationToken;
+            auto binaryOperation = std::make_shared<BinaryOperationNode>(left, operationToken, right);
+            left = binaryOperation; 
 
         }
 
+        result.success(left);
         return left;
 
     }
 
-    std::shared_ptr<Node> expr(ParseResult& result) 
+    std::shared_ptr<Node> expr(ParseResult& result)
     {
 
         auto left = term(result);
-
         if (result.hasError()) return nullptr;
 
-        while (currentToken.getType() == TOKEN_TYPE_PLUS || currentToken.getType() == TOKEN_TYPE_MINUS)
+        while (currentToken.getType() == TokenType::PLUS ||
+            currentToken.getType() == TokenType::MINUS)
         {
 
             Token operationToken = currentToken;
@@ -482,296 +841,391 @@ private:
 
             if (result.hasError()) return nullptr;
 
-            auto binaryOperationToken = std::make_shared<BinOpNode>(left, operationToken, right);
-            result.registerNode(binaryOperationToken); 
-            left = binaryOperationToken;
+            auto binaryOperation = std::make_shared<BinaryOperationNode>(left, operationToken, right);
+            left = binaryOperation;
 
         }
 
+        result.success(left);
         return left;
 
     }
 
 };
 
-class LexerClass 
-{ 
-private:
-
-    std::string text;
-    Position position;
-    char currentSymbol;
-    std::string fileName;
-
+class Number
+{
 public:
 
-    LexerClass(const std::string& inputText, const std::string& fn = "input")
-        : text(inputText), position(-1, 0, -1, fn, inputText), fileName(fn)
+    double value;
+    Position positionStart;
+    Position positionEnd;
+    std::string context;
+
+    Number() : value(0), positionStart(), positionEnd(), context("") {}
+
+    Number(double v) : value(v), positionStart(), positionEnd(), context("") {}
+
+    Number setPosition(const Position& start, const Position& end)
     {
 
-        advance();
+        positionStart = start;
+        positionEnd = end;
+        return *this;
 
     }
 
-    void advance()
+    Number setContext(const std::string& ctx)
     {
 
-        position.advance(currentSymbol);
-
-        if (position.index < static_cast<int>(text.size()))  currentSymbol = text[position.index];   
-        else currentSymbol = END_SYMBOL;
-           
-    }
-
-    bool isDigit(char ch)
-    {
-
-        return std::isdigit(static_cast<unsigned char>(ch));
+        context = ctx;
+        return *this;
 
     }
 
-    Token makeNumber()
+    Number addedTo(const Number& other) const
     {
 
-        std::string strNumber = "";
-        int dotCount = 0;
-
-        Position startPosition = position.copy();
-
-        while (currentSymbol != END_SYMBOL && (isDigit(currentSymbol) || currentSymbol == '.'))
-        {
-
-            if (currentSymbol == '.')
-            {
-
-                if (dotCount == 1) break;
-                dotCount += 1;
-                strNumber += '.';
-
-            }
-            else
-            {
-
-                strNumber += currentSymbol;
-
-            }
-
-            advance();
-
-        }
-
-        std::string type = TOKEN_TYPE_FLOAT;
-        double value = 0;
-
-        try
-        {
-
-            if (dotCount == 0)
-            {
-
-                type = TOKEN_TYPE_INT;
-                value = std::stoi(strNumber);
-
-            }
-            else
-            {
-
-                value = std::stod(strNumber);
-
-            }
-
-        }
-        catch (const std::invalid_argument& e)
-        {
-
-            Position end_pos = position.copy();
-            throw IllegalCharError("Invalid number format: " + strNumber, startPosition, end_pos);
-
-        }
-        catch (const std::out_of_range& e)
-        {
-
-            Position end_pos = position.copy();
-            throw IllegalCharError("Number out of range: " + strNumber, startPosition, end_pos);
-
-        }
-
-        return Token(type, value, startPosition, position.copy());
+        return Number(this->value + other.value);
 
     }
 
-    LexerResult makeTokens()
+    Number subbedBy(const Number& other) const
     {
 
-        LexerResult result;
+        return Number(this->value - other.value);
 
-        try 
+    }
+
+    Number multedBy(const Number& other) const
+    {
+
+        return Number(this->value * other.value);
+
+    }
+
+    std::pair<Number, std::unique_ptr<Error>> dived_by(const Number& other) const
+    {
+
+        if (other.value == 0) 
         {
 
-            while (currentSymbol != END_SYMBOL)
+            return 
             {
 
-                if (currentSymbol == ' ' || currentSymbol == '\t' || currentSymbol == '\n' || currentSymbol == '\r')
-                {
+                Number(),
+                std::make_unique<RTError>(
+                    "Runtime Error",
+                    "Division by zero",
+                    other.positionStart,
+                    other.positionEnd
+                )
 
-                    advance();
-
-                }
-                else if (isDigit(currentSymbol))
-                {
-
-                    result.tokens.push_back(makeNumber());
-
-                }
-                else if (currentSymbol == '+')
-                {
-
-                    Token tok(TOKEN_TYPE_PLUS, 0, position.copy(), position.copy());
-                    result.tokens.push_back(tok);
-                    advance();
-
-                }
-                else if (currentSymbol == '-')
-                {
-
-                    Token tok(TOKEN_TYPE_MINUS, 0, position.copy(), position.copy());
-                    result.tokens.push_back(tok);
-                    advance();
-
-                }
-                else if (currentSymbol == '*')
-                {
-
-                    Token tok(TOKEN_TYPE_MULT, 0, position.copy(), position.copy());
-                    result.tokens.push_back(tok);
-                    advance();
-
-                }
-                else if (currentSymbol == '/')
-                {
-
-                    Token tok(TOKEN_TYPE_DIV, 0, position.copy(), position.copy());
-                    result.tokens.push_back(tok);
-                    advance();
-
-                }
-                else if (currentSymbol == '(')
-                {
-
-                    Token tok(TOKEN_TYPE_LPAREN, 0, position.copy(), position.copy());
-                    result.tokens.push_back(tok);
-                    advance();
-
-                }
-                else if (currentSymbol == ')')
-                {
-
-                    Token tok(TOKEN_TYPE_RPAREN, 0, position.copy(), position.copy()); 
-                    result.tokens.push_back(tok);
-                    advance();
-
-                }
-                else
-                {
-
-                    char current = currentSymbol;
-                    Position startPosition = position.copy();
-                    advance();
-                    Position endPosition = position.copy();
-
-                    result.error = std::make_unique<IllegalCharError>(std::string(1, current), startPosition, endPosition);
-                    return result;
-
-                }
-
-            }
-
-            Token eofTok(TOKEN_TYPE_EOF, 0, position.copy(), position.copy());
-            result.tokens.push_back(eofTok);
+            };
 
         }
-        catch (const IllegalCharError& e)
+
+        return { Number(this->value / other.value), nullptr };
+
+    }
+
+    std::string toString() const
+    {
+
+        if (std::floor(value) == value)
         {
 
-            result.error = std::make_unique<IllegalCharError>(e);
+            return std::to_string((int)value);
 
         }
+        else 
+        {
 
-        return result;
+            return std::to_string(value);
+
+        }
 
     }
 
 };
 
-std::pair<std::shared_ptr<Node>, std::unique_ptr<Error>> run(const std::string& text, const std::string& fileName = "input")
+class RTResult
+{
+public:
+
+    double value = 0.0;
+    std::unique_ptr<Error> error = nullptr;
+
+    RTResult(const RTResult&) = delete;
+
+    RTResult& operator = (const RTResult&) = delete;
+
+    RTResult() = default;
+
+    RTResult(RTResult&& other) noexcept
+        : value(other.value), error(std::move(other.error))
+    {}
+
+    RTResult& operator = (RTResult&& other) noexcept
+    {
+
+        if (this != &other)
+        {
+
+            value = other.value;
+            error = std::move(other.error);
+
+        }
+
+        return *this;
+
+    }
+
+    double registerValue(double inputValue)
+    {
+        
+        return inputValue;
+
+    }
+
+    bool hasError() const 
+    {
+
+        return (error != nullptr);
+
+    }
+
+    RTResult& success(double inputValue)
+    {
+
+        value = inputValue;
+        return *this;
+
+    }
+
+    RTResult& failure(std::unique_ptr<Error> error)
+    {
+
+        error = std::move(error);
+        return *this;
+
+    }
+
+};
+
+class Context
+{
+public:
+
+    std::string displayName;
+    std::shared_ptr<Context> parent;
+    Position parentEntryPosition;
+
+    Context(const std::string& inputName,
+        std::shared_ptr<Context> parentContext = nullptr,
+        const Position& parentPos = Position())
+        : displayName(inputName), parent(parentContext),
+        parentEntryPosition(parentPos)
+    {}
+
+};
+
+class Interpreter : public NodeVisitor
+{
+private:
+
+    RTResult result;
+    std::shared_ptr<Context> context;
+
+public:
+
+    Interpreter(std::shared_ptr<Context> inputContext)
+        : context(inputContext)
+    {}
+
+    RTResult interpret(const std::shared_ptr<Node>& root)
+    {
+
+        result = RTResult();
+        if (root)  root->accept(*this);
+
+        return std::move(result);
+
+    }
+
+    void visit(NumberNode& inputNode) override
+    {
+
+        Number numberVal(inputNode.token.getValue());
+        numberVal.setPosition(inputNode.token.positionStart, inputNode.token.positionEnd);
+        numberVal.setContext(context->displayName);
+
+        result.success(numberVal.value);
+
+    }
+
+    void visit(BinaryOperationNode& inputNode) override
+    {
+
+        Interpreter leftInterpreter(context);
+        RTResult leftResult = leftInterpreter.interpret(inputNode.left);
+
+        if (leftResult.hasError()) 
+        {
+
+            result = std::move(leftResult); 
+            return;
+
+        }
+
+        double leftValue = result.registerValue(leftResult.value);
+
+        Interpreter rightInterpreter(context);
+        RTResult rightResult = rightInterpreter.interpret(inputNode.right);
+
+        if (rightResult.hasError()) 
+        {
+
+            result = std::move(rightResult);
+            return;
+
+        }
+
+        double rightValue = result.registerValue(rightResult.value);
+        double outValue = 0.0;
+        TokenType operationType = inputNode.operation.getType();
+
+        if (operationType == TokenType::PLUS) outValue = leftValue + rightValue;
+        else if (operationType == TokenType::MINUS) outValue = leftValue - rightValue;
+        else if (operationType == TokenType::MULT) outValue = leftValue * rightValue;
+        else if (operationType == TokenType::DIV) 
+        {
+            
+            auto divResult = Number(leftValue).dived_by(Number(rightValue));
+
+            if (divResult.second) 
+            {
+
+                result.failure(std::move(divResult.second));
+                return;
+
+            }
+
+            outValue = divResult.first.value;
+
+        }
+        else
+        {
+
+            result.failure(std::make_unique<RTError>(
+                "Runtime Error",
+                "Unknown binary operator",
+                inputNode.operation.positionStart,
+                inputNode.operation.positionEnd
+            ));
+
+            return;
+
+        }
+
+        result.success(outValue);
+
+    }
+
+    void visit(UnaryOperationNode& inputNode) override
+    {
+      
+        Interpreter subInterpreter(context);
+        RTResult subResult = subInterpreter.interpret(inputNode.node);
+
+        if (subResult.hasError()) 
+        {
+
+            result = std::move(subResult);
+            return;
+
+        }
+
+        double value = subResult.value;
+
+        if (inputNode.operation.getType() == TokenType::MINUS) result.success(-value);
+        else if (inputNode.operation.getType() == TokenType::PLUS) result.success(+value);
+        else 
+        {
+
+            result.failure(std::make_unique<RTError>(
+                "Runtime Error",
+                "Unknown unary operator",
+                inputNode.operation.positionStart,
+                inputNode.operation.positionEnd
+            ));
+
+        }
+
+    }
+
+};
+
+std::pair<double, std::unique_ptr<Error>> run(const std::string& text,
+    const std::string& fileName = "input")
 {
 
-    LexerClass lexer(text, fileName);
+    Lexer lexer(text, fileName);
     LexerResult lexResult = lexer.makeTokens();
 
-    if (lexResult.error) return { nullptr, std::move(lexResult.error) };
-       
-    ParserClass parser(lexResult.tokens);
-    auto parseResult = parser.parse();
+    if (lexResult.error)
+    {
 
-    return parseResult;
+        return { 0.0, std::move(lexResult.error) };
+
+    }
+
+    Parser parser(lexResult.tokens);
+    auto parseOutput = parser.parse(); 
+
+    if (parseOutput.second) 
+    {
+
+        return { 0.0, std::move(parseOutput.second) };
+
+    }
+
+    std::shared_ptr<Node> root = parseOutput.first;
+
+    std::shared_ptr<Context> context = std::make_shared<Context>("<program>");
+    Interpreter interpreter(context);
+    RTResult result = interpreter.interpret(root);
+
+    if (result.hasError()) return { 0.0, std::move(result.error) };
+    else return { result.value, nullptr };
 
 }
 
 int main()
 {
 
-    std::string input;
-
-    while (true)
+    while (true) 
     {
 
+        std::string input;
         std::cout << "Yox47 > ";
-        std::getline(std::cin, input);
+
+        if (!std::getline(std::cin, input)) 
+        {
+
+            std::cout << "\nExiting REPL.\n";
+            break;
+
+        }
 
         if (input.empty()) continue;
 
-        auto parseResult = run(input, "<stdin>");
-        std::shared_ptr<Node> ast = parseResult.first;
-        std::unique_ptr<Error> error = std::move(parseResult.second);
+        auto runResult = run(input, "<stdin>");
+        double value = runResult.first;
+        std::unique_ptr<Error> error = std::move(runResult.second);
 
-        if (error) std::cout << error->asString() << std::endl;
-        else
-        {
-
-            std::shared_ptr<NumberNode> numberNode = std::dynamic_pointer_cast<NumberNode>(ast);
-            if (numberNode) 
-            {
-
-                numberNode->printNode();
-                std::cout << std::endl;
-                continue;
-
-            }
-
-            std::shared_ptr<BinOpNode> binaryOperationNode = std::dynamic_pointer_cast<BinOpNode>(ast);
-            if (binaryOperationNode) 
-            {
-
-                binaryOperationNode->printNode();
-                std::cout << std::endl;
-                continue;
-
-            }
-
-            std::shared_ptr<UnaryOpNode> unaryOperationNode = std::dynamic_pointer_cast<UnaryOpNode>(ast);
-            if (unaryOperationNode)
-            {
-
-                unaryOperationNode->printNode();
-                std::cout << std::endl;
-                continue;
-
-            }
-
-            std::cout << "Parsed AST is empty or of unknown type." << std::endl;
-
-        }
+        if (error) std::cout << error->asString() << "\n";
+        else std::cout << value << "\n";
 
     }
 
