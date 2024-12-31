@@ -669,7 +669,7 @@ public:
     void failure(std::unique_ptr<Error> inputError)
     {
 
-        inputError = std::move(inputError);
+        error = std::move(inputError);
 
     }
 
@@ -1003,10 +1003,10 @@ public:
 
     }
 
-    RTResult& failure(std::unique_ptr<Error> error)
+    RTResult& failure(std::unique_ptr<Error> inputError)
     {
 
-        error = std::move(error);
+        error = std::move(inputError);
         return *this;
 
     }
@@ -1047,7 +1047,7 @@ public:
     {
 
         result = RTResult();
-        if (root)  root->accept(*this);
+        if (root) root->accept(*this);
 
         return std::move(result);
 
