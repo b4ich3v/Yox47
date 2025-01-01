@@ -1,16 +1,24 @@
-<expression> ::= <term> ( (PLUS | MINUS) <term> )*
+<expression>   ::= "VAR" <identifier> "=" <expression>
+                 | <term> ( (PLUS | MINUS) <term> )*
 
-<term>       ::= <factor> ( (MULT | DIV) <factor> )*
+<term>         ::= <factor> ( (MULT | DIV) <factor> )*
 
-<factor>     ::= (PLUS | MINUS) <factor>
-               | <number>
-               | LPAREN <expression> RPAREN
+<factor>       ::= (PLUS | MINUS) <factor>
+                 | <atom>
 
-<number>     ::= INT
-               | FLOAT
+<atom>         ::= <number>
+                 | <identifier>
+                 | LPAREN <expression> RPAREN
 
-<int>        ::= <digit>+
+<number>       ::= <int> | <float>
 
-<float>      ::= <digit>+ "." <digit>+
+<int>          ::= <digit>+
+<float>        ::= <digit>+ "." <digit>+
 
-<digit>      ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+<digit>        ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<identifier>   ::= <alpha_underscore> <alnum_underscore>* 
+
+<alpha_underscore> ::= [A-Za-z_] 
+
+<alnum_underscore> ::= [A-Za-z0-9_]
