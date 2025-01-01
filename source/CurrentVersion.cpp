@@ -23,8 +23,8 @@ enum class TokenType
     MULT,
     DIV,
     POW,
-    KEYWORD,     
-    IDENTIFIER,  
+    KEYWORD,
+    IDENTIFIER,
     EQ,
     EOF_TOKEN,
     NONE
@@ -391,7 +391,7 @@ public:
         {
 
             Token t(TokenType::KEYWORD, 0.0, startPos, position.copy());
-            t.setTextValue("new"); 
+            t.setTextValue("new");
             return t;
 
         }
@@ -399,7 +399,7 @@ public:
         {
 
             Token token(TokenType::IDENTIFIER, 0.0, startPos, position.copy());
-            token.setTextValue(resultStr); 
+            token.setTextValue(resultStr);
             return token;
 
         }
@@ -991,7 +991,7 @@ private:
 
             Token operationToken = currentToken;
             advance();
-            auto right = factor(result); 
+            auto right = factor(result);
             if (result.hasError()) return nullptr;
 
             left = std::make_shared<BinaryOperationNode>(left, operationToken, right);
@@ -1028,7 +1028,7 @@ private:
                 }
 
                 Token varNameToken = currentToken;
-                advance(); 
+                advance();
 
                 if (currentToken.getType() != TokenType::EQ)
                 {
@@ -1043,7 +1043,7 @@ private:
 
                 }
 
-                advance(); 
+                advance();
                 auto rightExpr = expr(result);
                 if (result.hasError()) return nullptr;
 
@@ -1329,17 +1329,17 @@ public:
 
     }
 
-    // 1) Прочитане на променлива
     void visit(VariableAccessNode& inputNode)
     {
-        // Прочитаме името:
+
         std::string varName = inputNode.varNameToken.getTextValue();
 
         bool found = false;
         double value = context->symbolTable->get(varName, found);
+
         if (!found)
         {
-            // Променливата не съществува => Runtime Error
+
             result.failure(std::make_unique<RTError>(
                 "Runtime Error",
                 "Variable '" + varName + "' is not defined",
@@ -1347,34 +1347,35 @@ public:
                 inputNode.varNameToken.positionEnd
             ));
             return;
+
         }
 
-        // иначе success, записваме value:
         result.success(value);
+
     }
 
-    // 2) Присвояване на променлива
     void visit(VariableAssignNode& inputNode)
     {
-        // Първо изчисляваме дясната страна:
+
         Interpreter rightInterpreter(context);
         RTResult rightResult = rightInterpreter.interpret(inputNode.valueNode);
 
         if (rightResult.hasError())
         {
+
             result = std::move(rightResult);
             return;
+
         }
 
         double valueToAssign = rightResult.value;
 
         std::string varName = inputNode.varNameToken.getTextValue();
-        // Записваме в symbolTable
         context->symbolTable->set(varName, valueToAssign);
 
         result.success(valueToAssign);
-    }
 
+    }
 
     void visit(NumberNode& inputNode) override
     {
@@ -1552,7 +1553,7 @@ int main()
 
         if (input.empty()) continue;
 
-        auto runResult = run(input, "<stdin>", globalContext); 
+        auto runResult = run(input, "<stdin>", globalContext);
         double value = runResult.first;
         std::unique_ptr<Error> error = std::move(runResult.second);
 
