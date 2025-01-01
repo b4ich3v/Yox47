@@ -21,6 +21,7 @@ enum class TokenType
     MINUS,
     MULT,
     DIV,
+    POW,
     EOF_TOKEN,
     NONE
 
@@ -33,8 +34,8 @@ public:
     int index;
     int line;
     int column;
-    std::string fileName;   
-    std::string fileText; 
+    std::string fileName;
+    std::string fileText;
 
     Position()
         : index(-1), line(0), column(-1), fileName(""), fileText("")
@@ -120,7 +121,7 @@ public:
             std::stringstream textStream(text);
             std::string line;
             while (std::getline(textStream, line, '\n')) lines.push_back(line);
-                
+
         }
 
         if (lineNumber < 0 || lineNumber >= (int)lines.size())
@@ -201,7 +202,7 @@ public:
 
     std::string asString() const override
     {
-        
+
         std::stringstream ss;
 
         ss << name << ": " << details << "\n"
@@ -220,7 +221,7 @@ class Token
 private:
 
     TokenType type;
-    double value; 
+    double value;
 
 public:
 
@@ -247,7 +248,7 @@ public:
     friend std::ostream& operator << (std::ostream& os, const Token& token)
     {
 
-        switch (token.type) 
+        switch (token.type)
         {
         case TokenType::INT:
             os << "INT:" << (int)token.value;
@@ -297,7 +298,7 @@ public:
     void printTokens() const
     {
 
-        for (auto& t : tokens) 
+        for (auto& t : tokens)
         {
 
             std::cout << t << " ";
@@ -360,10 +361,10 @@ public:
         while (currentChar != END_SYMBOL &&
             (isDigit(currentChar) || currentChar == '.'))
         {
-            if (currentChar == '.') 
+            if (currentChar == '.')
             {
 
-                if (dotCount == 1) break; 
+                if (dotCount == 1) break;
                 dotCount += 1;
                 numStr.push_back('.');
 
@@ -377,17 +378,17 @@ public:
         TokenType type = TokenType::FLOAT;
         double value = 0.0;
 
-        try 
+        try
         {
 
-            if (dotCount == 0) 
+            if (dotCount == 0)
             {
 
                 type = TokenType::INT;
                 value = std::stoi(numStr);
 
             }
-            else 
+            else
             {
 
                 value = std::stod(numStr);
@@ -395,7 +396,7 @@ public:
             }
 
         }
-        catch (const std::invalid_argument&) 
+        catch (const std::invalid_argument&)
         {
 
             Position endPos = position.copy();
@@ -403,7 +404,7 @@ public:
                 startPos, endPos);
 
         }
-        catch (const std::out_of_range&) 
+        catch (const std::out_of_range&)
         {
 
             Position endPos = position.copy();
@@ -421,10 +422,10 @@ public:
 
         LexerResult result;
 
-        try 
+        try
         {
 
-            while (currentChar != END_SYMBOL) 
+            while (currentChar != END_SYMBOL)
             {
 
                 if (currentChar == ' ' || currentChar == '\t' ||
@@ -441,7 +442,7 @@ public:
                     result.tokens.push_back(numTok);
 
                 }
-                else if (currentChar == '+') 
+                else if (currentChar == '+')
                 {
 
                     Token t(TokenType::PLUS, 0.0, position.copy(), position.copy());
@@ -449,7 +450,7 @@ public:
                     advance();
 
                 }
-                else if (currentChar == '-') 
+                else if (currentChar == '-')
                 {
 
                     Token t(TokenType::MINUS, 0.0, position.copy(), position.copy());
@@ -465,7 +466,7 @@ public:
                     advance();
 
                 }
-                else if (currentChar == '/') 
+                else if (currentChar == '/')
                 {
 
                     Token t(TokenType::DIV, 0.0, position.copy(), position.copy());
@@ -473,7 +474,16 @@ public:
                     advance();
 
                 }
-                else if (currentChar == '(') 
+                else if (currentChar == '^')
+                {
+
+                    Token t(TokenType::POW, 0.0, position.copy(), position.copy());
+                    result.tokens.push_back(t);
+                    advance();
+
+                }
+
+                else if (currentChar == '(')
                 {
 
                     Token t(TokenType::LPAREN, 0.0, position.copy(), position.copy());
@@ -481,7 +491,7 @@ public:
                     advance();
 
                 }
-                else if (currentChar == ')') 
+                else if (currentChar == ')')
                 {
 
                     Token t(TokenType::RPAREN, 0.0, position.copy(), position.copy());
@@ -489,7 +499,7 @@ public:
                     advance();
 
                 }
-                else 
+                else
                 {
 
                     char ch = currentChar;
@@ -511,7 +521,7 @@ public:
             result.tokens.push_back(eofToken);
 
         }
-        catch (const IllegalCharError& e) 
+        catch (const IllegalCharError& e)
         {
 
             result.error = std::make_unique<IllegalCharError>(
@@ -652,7 +662,7 @@ public:
     std::shared_ptr<Node> node = nullptr;
     std::unique_ptr<Error> error = nullptr;
 
-    bool hasError() const 
+    bool hasError() const
     {
 
         return (error != nullptr);
@@ -743,60 +753,12 @@ private:
             if (result.hasError()) return nullptr;
 
             auto node = std::make_shared<UnaryOperationNode>(current, factorNode);
-
             result.success(node);
             return node;
 
         }
-        else if (current.getType() == TokenType::INT || current.getType() == TokenType::FLOAT)
-        {
 
-            advance();
-            auto node = std::make_shared<NumberNode>(current);
-
-            result.success(node);
-            return node;
-
-        }
-        else if (current.getType() == TokenType::LPAREN)
-        {
-
-            advance();
-            auto expressionNode = expr(result);
-            if (result.hasError()) return nullptr;
-
-            if (currentToken.getType() == TokenType::RPAREN) 
-            {
-
-                advance();
- 
-                result.success(expressionNode);
-                return expressionNode;
-            }
-            else 
-            {
-
-                auto error = std::make_unique<InvalidSyntaxError>(
-                    currentToken.positionStart,
-                    currentToken.positionEnd,
-                    "Expected ')'"
-                );
-
-                result.failure(std::move(error));
-                return nullptr;
-
-            }
-
-        }
-
-        auto error = std::make_unique<InvalidSyntaxError>(
-            current.positionStart,
-            current.positionEnd,
-            "Expected int, float, +, - или '('"
-        );
-        result.failure(std::move(error));
-
-        return nullptr;
+        return power(result);
 
     }
 
@@ -816,7 +778,84 @@ private:
             if (result.hasError()) return nullptr;
 
             auto binaryOperation = std::make_shared<BinaryOperationNode>(left, operationToken, right);
-            left = binaryOperation; 
+            left = binaryOperation;
+
+        }
+
+        result.success(left);
+        return left;
+
+    }
+
+    std::shared_ptr<Node> atom(ParseResult& result)
+    {
+
+        Token current = currentToken;
+
+        if (current.getType() == TokenType::INT || current.getType() == TokenType::FLOAT)
+        {
+
+            advance();
+            auto node = std::make_shared<NumberNode>(current);
+            result.success(node);
+            return node;
+
+        }
+        else if (current.getType() == TokenType::LPAREN)
+        {
+
+            advance();
+            auto expressionNode = expr(result);
+            if (result.hasError()) return nullptr;
+
+            if (currentToken.getType() == TokenType::RPAREN)
+            {
+
+                advance();
+                result.success(expressionNode);
+                return expressionNode;
+
+            }
+            else
+            {
+
+                auto error = std::make_unique<InvalidSyntaxError>(
+                    currentToken.positionStart,
+                    currentToken.positionEnd,
+                    "Expected ')'"
+                );
+                result.failure(std::move(error));
+                return nullptr;
+
+            }
+
+        }
+
+        auto error = std::make_unique<InvalidSyntaxError>(
+            current.positionStart,
+            current.positionEnd,
+            "Expected int, float, or '('"
+        );
+        result.failure(std::move(error));
+        return nullptr;
+
+    }
+
+    std::shared_ptr<Node> power(ParseResult& result)
+    {
+
+        auto left = atom(result);
+        if (result.hasError()) return nullptr;
+
+        while (currentToken.getType() == TokenType::POW)
+        {
+
+            Token operationToken = currentToken;
+            advance();
+            auto right = factor(result); 
+            if (result.hasError()) return nullptr;
+
+            left = std::make_shared<BinaryOperationNode>(left, operationToken, right);
 
         }
 
@@ -848,6 +887,7 @@ private:
 
         result.success(left);
         return left;
+
 
     }
 
@@ -907,10 +947,10 @@ public:
     std::pair<Number, std::unique_ptr<Error>> dived_by(const Number& other) const
     {
 
-        if (other.value == 0) 
+        if (other.value == 0)
         {
 
-            return 
+            return
             {
 
                 Number(),
@@ -938,7 +978,7 @@ public:
             return std::to_string((int)value);
 
         }
-        else 
+        else
         {
 
             return std::to_string(value);
@@ -983,12 +1023,12 @@ public:
 
     double registerValue(double inputValue)
     {
-        
+
         return inputValue;
 
     }
 
-    bool hasError() const 
+    bool hasError() const
     {
 
         return (error != nullptr);
@@ -1070,10 +1110,10 @@ public:
         Interpreter leftInterpreter(context);
         RTResult leftResult = leftInterpreter.interpret(inputNode.left);
 
-        if (leftResult.hasError()) 
+        if (leftResult.hasError())
         {
 
-            result = std::move(leftResult); 
+            result = std::move(leftResult);
             return;
 
         }
@@ -1083,7 +1123,7 @@ public:
         Interpreter rightInterpreter(context);
         RTResult rightResult = rightInterpreter.interpret(inputNode.right);
 
-        if (rightResult.hasError()) 
+        if (rightResult.hasError())
         {
 
             result = std::move(rightResult);
@@ -1098,12 +1138,12 @@ public:
         if (operationType == TokenType::PLUS) outValue = leftValue + rightValue;
         else if (operationType == TokenType::MINUS) outValue = leftValue - rightValue;
         else if (operationType == TokenType::MULT) outValue = leftValue * rightValue;
-        else if (operationType == TokenType::DIV) 
+        else if (operationType == TokenType::DIV)
         {
-            
+
             auto divResult = Number(leftValue).dived_by(Number(rightValue));
 
-            if (divResult.second) 
+            if (divResult.second)
             {
 
                 result.failure(std::move(divResult.second));
@@ -1112,6 +1152,13 @@ public:
             }
 
             outValue = divResult.first.value;
+
+        }
+        else if (operationType == TokenType::POW)
+        {
+
+            auto divResult = Number(std::pow(leftValue, rightValue));
+            outValue = divResult.value;
 
         }
         else
@@ -1134,11 +1181,11 @@ public:
 
     void visit(UnaryOperationNode& inputNode) override
     {
-      
+
         Interpreter subInterpreter(context);
         RTResult subResult = subInterpreter.interpret(inputNode.node);
 
-        if (subResult.hasError()) 
+        if (subResult.hasError())
         {
 
             result = std::move(subResult);
@@ -1150,7 +1197,7 @@ public:
 
         if (inputNode.operation.getType() == TokenType::MINUS) result.success(-value);
         else if (inputNode.operation.getType() == TokenType::PLUS) result.success(+value);
-        else 
+        else
         {
 
             result.failure(std::make_unique<RTError>(
@@ -1181,9 +1228,9 @@ std::pair<double, std::unique_ptr<Error>> run(const std::string& text,
     }
 
     Parser parser(lexResult.tokens);
-    auto parseOutput = parser.parse(); 
+    auto parseOutput = parser.parse();
 
-    if (parseOutput.second) 
+    if (parseOutput.second)
     {
 
         return { 0.0, std::move(parseOutput.second) };
@@ -1204,13 +1251,13 @@ std::pair<double, std::unique_ptr<Error>> run(const std::string& text,
 int main()
 {
 
-    while (true) 
+    while (true)
     {
 
         std::string input;
         std::cout << "Yox47 > ";
 
-        if (!std::getline(std::cin, input)) 
+        if (!std::getline(std::cin, input))
         {
 
             std::cout << "\nExiting REPL.\n";
