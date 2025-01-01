@@ -6,6 +6,7 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_map>
 #include <cmath>
 
 const char END_SYMBOL = '\0';
@@ -22,6 +23,9 @@ enum class TokenType
     MULT,
     DIV,
     POW,
+    KEYWORD,     
+    IDENTIFIER,  
+    EQ,
     EOF_TOKEN,
     NONE
 
@@ -222,6 +226,7 @@ private:
 
     TokenType type;
     double value;
+    std::string textValue;
 
 public:
 
@@ -244,6 +249,10 @@ public:
     TokenType getType() const { return type; }
 
     double getValue() const { return value; }
+
+    void setTextValue(const std::string& inputText) { textValue = inputText; }
+
+    const std::string& getTextValue() const { return textValue; }
 
     friend std::ostream& operator << (std::ostream& os, const Token& token)
     {
@@ -333,6 +342,20 @@ public:
 
     }
 
+    bool isAlpha(char ch)
+    {
+
+        return std::isalpha((unsigned char)ch) || ch == '_';
+
+    }
+
+    bool isAlnumOrUnderscore(char ch)
+    {
+
+        return std::isalnum((unsigned char)ch) || ch == '_';
+
+    }
+
     void advance()
     {
 
@@ -347,6 +370,39 @@ public:
     {
 
         return (bool)std::isdigit((unsigned char)c);
+
+    }
+
+    Token makeIdentifierOrKeyword()
+    {
+
+        Position startPos = position.copy();
+        std::string resultStr;
+
+        while (currentChar != END_SYMBOL && isAlnumOrUnderscore(currentChar))
+        {
+
+            resultStr.push_back(currentChar);
+            advance();
+
+        }
+
+        if (resultStr == "new")
+        {
+
+            Token t(TokenType::KEYWORD, 0.0, startPos, position.copy());
+            t.setTextValue("new"); 
+            return t;
+
+        }
+        else
+        {
+
+            Token token(TokenType::IDENTIFIER, 0.0, startPos, position.copy());
+            token.setTextValue(resultStr); 
+            return token;
+
+        }
 
     }
 
@@ -433,6 +489,20 @@ public:
                 {
 
                     advance();
+
+                }
+                else if (isAlpha(currentChar))
+                {
+
+                    result.tokens.push_back(makeIdentifierOrKeyword());
+
+                }
+                else if (currentChar == '=')
+                {
+
+                    Token t(TokenType::EQ, 0.0, position.copy(), position.copy());
+                    advance();
+                    result.tokens.push_back(t);
 
                 }
                 else if (isDigit(currentChar))
@@ -542,6 +612,10 @@ class BinaryOperationNode;
 
 class UnaryOperationNode;
 
+class VariableAccessNode;
+
+class VariableAssignNode;
+
 class NodeVisitor
 {
 public:
@@ -553,6 +627,10 @@ public:
     virtual void visit(BinaryOperationNode& node) = 0;
 
     virtual void visit(UnaryOperationNode& node) = 0;
+
+    virtual void visit(VariableAccessNode& node) = 0;
+
+    virtual void visit(VariableAssignNode& node) = 0;
 
 };
 
@@ -649,6 +727,58 @@ public:
 
         std::cout << "(" << operation << ", ";
         node->printNode();
+        std::cout << ")";
+
+    }
+
+};
+
+class VariableAccessNode : public Node
+{
+public:
+
+    Token varNameToken;
+
+    VariableAccessNode(const Token& t) : varNameToken(t) {}
+
+    void accept(NodeVisitor& visitor) override
+    {
+
+        visitor.visit(*this);
+
+    }
+
+    void printNode() const override
+    {
+
+        std::cout << "VarAccess(" << varNameToken.getTextValue() << ")";
+
+    }
+
+};
+
+class VariableAssignNode : public Node
+{
+public:
+
+    Token varNameToken;
+    std::shared_ptr<Node> valueNode;
+
+    VariableAssignNode(const Token& t, const std::shared_ptr<Node>& val)
+        : varNameToken(t), valueNode(val) {}
+
+    void accept(NodeVisitor& visitor) override
+    {
+
+        visitor.visit(*this);
+
+    }
+
+    void printNode() const override
+    {
+
+        std::cout << "VarAssign(" << varNameToken.getTextValue() << " = ";
+        valueNode->printNode();
         std::cout << ")";
 
     }
@@ -801,6 +931,15 @@ private:
             return node;
 
         }
+        else if (current.getType() == TokenType::IDENTIFIER)
+        {
+
+            advance();
+            auto node = std::make_shared<VariableAccessNode>(current);
+            result.success(node);
+            return node;
+
+        }
         else if (current.getType() == TokenType::LPAREN)
         {
 
@@ -867,6 +1006,55 @@ private:
     std::shared_ptr<Node> expr(ParseResult& result)
     {
 
+        if (currentToken.getType() == TokenType::KEYWORD)
+        {
+
+            if (currentToken.getTextValue() == "new")
+            {
+
+                advance();
+
+                if (currentToken.getType() != TokenType::IDENTIFIER)
+                {
+
+                    auto error = std::make_unique<InvalidSyntaxError>(
+                        currentToken.positionStart,
+                        currentToken.positionEnd,
+                        "Expected identifier"
+                    );
+                    result.failure(std::move(error));
+                    return nullptr;
+
+                }
+
+                Token varNameToken = currentToken;
+                advance(); 
+
+                if (currentToken.getType() != TokenType::EQ)
+                {
+
+                    auto error = std::make_unique<InvalidSyntaxError>(
+                        currentToken.positionStart,
+                        currentToken.positionEnd,
+                        "Expected '='"
+                    );
+                    result.failure(std::move(error));
+                    return nullptr;
+
+                }
+
+                advance(); 
+                auto rightExpr = expr(result);
+                if (result.hasError()) return nullptr;
+
+                auto node = std::make_shared<VariableAssignNode>(varNameToken, rightExpr);
+                result.success(node);
+                return node;
+
+            }
+
+        }
+
         auto left = term(result);
         if (result.hasError()) return nullptr;
 
@@ -887,7 +1075,6 @@ private:
 
         result.success(left);
         return left;
-
 
     }
 
@@ -1053,6 +1240,50 @@ public:
 
 };
 
+class SymbolTable
+{
+private:
+
+    std::unordered_map<std::string, double> table;
+
+public:
+
+    SymbolTable() {}
+
+    bool exists(const std::string& name) const
+    {
+
+        return (table.find(name) != table.end());
+
+    }
+
+    double get(const std::string& name, bool& found) const
+    {
+
+        auto iter = table.find(name);
+
+        if (iter == table.end())
+        {
+
+            found = false;
+            return 0.0;
+
+        }
+
+        found = true;
+        return iter->second;
+
+    }
+
+    void set(const std::string& name, double value)
+    {
+
+        table[name] = value;
+
+    }
+
+};
+
 class Context
 {
 public:
@@ -1060,13 +1291,18 @@ public:
     std::string displayName;
     std::shared_ptr<Context> parent;
     Position parentEntryPosition;
+    std::shared_ptr<SymbolTable> symbolTable;
 
     Context(const std::string& inputName,
         std::shared_ptr<Context> parentContext = nullptr,
         const Position& parentPos = Position())
         : displayName(inputName), parent(parentContext),
         parentEntryPosition(parentPos)
-    {}
+    {
+
+        symbolTable = std::make_shared<SymbolTable>();
+
+    }
 
 };
 
@@ -1092,6 +1328,53 @@ public:
         return std::move(result);
 
     }
+
+    // 1) Прочитане на променлива
+    void visit(VariableAccessNode& inputNode)
+    {
+        // Прочитаме името:
+        std::string varName = inputNode.varNameToken.getTextValue();
+
+        bool found = false;
+        double value = context->symbolTable->get(varName, found);
+        if (!found)
+        {
+            // Променливата не съществува => Runtime Error
+            result.failure(std::make_unique<RTError>(
+                "Runtime Error",
+                "Variable '" + varName + "' is not defined",
+                inputNode.varNameToken.positionStart,
+                inputNode.varNameToken.positionEnd
+            ));
+            return;
+        }
+
+        // иначе success, записваме value:
+        result.success(value);
+    }
+
+    // 2) Присвояване на променлива
+    void visit(VariableAssignNode& inputNode)
+    {
+        // Първо изчисляваме дясната страна:
+        Interpreter rightInterpreter(context);
+        RTResult rightResult = rightInterpreter.interpret(inputNode.valueNode);
+
+        if (rightResult.hasError())
+        {
+            result = std::move(rightResult);
+            return;
+        }
+
+        double valueToAssign = rightResult.value;
+
+        std::string varName = inputNode.varNameToken.getTextValue();
+        // Записваме в symbolTable
+        context->symbolTable->set(varName, valueToAssign);
+
+        result.success(valueToAssign);
+    }
+
 
     void visit(NumberNode& inputNode) override
     {
@@ -1214,7 +1497,8 @@ public:
 };
 
 std::pair<double, std::unique_ptr<Error>> run(const std::string& text,
-    const std::string& fileName = "input")
+    const std::string& fileName,
+    std::shared_ptr<Context> sharedContext)
 {
 
     Lexer lexer(text, fileName);
@@ -1239,8 +1523,7 @@ std::pair<double, std::unique_ptr<Error>> run(const std::string& text,
 
     std::shared_ptr<Node> root = parseOutput.first;
 
-    std::shared_ptr<Context> context = std::make_shared<Context>("<program>");
-    Interpreter interpreter(context);
+    Interpreter interpreter(sharedContext);
     RTResult result = interpreter.interpret(root);
 
     if (result.hasError()) return { 0.0, std::move(result.error) };
@@ -1250,6 +1533,8 @@ std::pair<double, std::unique_ptr<Error>> run(const std::string& text,
 
 int main()
 {
+
+    auto globalContext = std::make_shared<Context>("<program>");
 
     while (true)
     {
@@ -1267,7 +1552,7 @@ int main()
 
         if (input.empty()) continue;
 
-        auto runResult = run(input, "<stdin>");
+        auto runResult = run(input, "<stdin>", globalContext); 
         double value = runResult.first;
         std::unique_ptr<Error> error = std::move(runResult.second);
 
