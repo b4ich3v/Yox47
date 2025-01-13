@@ -1,4 +1,4 @@
-<expression>   ::= "VAR" <identifier> "=" <expression>
+expression>   ::= "VAR" <identifier> "=" <expression>
                  | <term> ( (PLUS | MINUS) <term> )*
 
 <term>         ::= <factor> ( (MULT | DIV) <factor> )*
