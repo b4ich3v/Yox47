@@ -35,6 +35,16 @@ public:
 
 };
 
+struct CharLitExpression: public Expression
+{
+public:
+
+    std::string text;          
+
+    explicit CharLitExpression(const std::string& text);
+
+};
+
 struct BinaryExpression: public Expression 
 {
 public:
