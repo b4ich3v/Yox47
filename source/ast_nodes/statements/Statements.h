@@ -1,4 +1,5 @@
 #include "Node.h"
+#include <vector>
 #include "Expressions.h"
 #pragma once
 
