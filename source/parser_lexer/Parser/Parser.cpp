@@ -31,6 +31,17 @@ void Parser::expectManagement(TokenType type, const char* message)
 
 }
 
+VariableType Parser::parseType()
+{
+
+	if (matcher(TokenType::KEY_WORD_INT)) return VariableType::Int;
+	if (matcher(TokenType::KEY_WORD_FLOAT)) return VariableType::Float;
+	if (matcher(TokenType::KEY_WORD_CHAR)) return VariableType::Char;
+
+	throw std::runtime_error("expected type specifier");
+
+}
+
 int Parser::priorityManagement(TokenType type)
 {
 
@@ -61,21 +72,48 @@ std::unique_ptr<Program> Parser::parseProgram()
 
 }
 
-std::unique_ptr<FunctionDeclaration> Parser::parseFunction() 
+std::unique_ptr<FunctionDeclaration> Parser::parseFunction()
 {
 
 	expectManagement(TokenType::KEY_WORD_FUNCTION, "expected 'function'");
-	if (!checkToken(TokenType::IDENTIFIER)) throw std::runtime_error("expected function name");
 
-	std::string name(currentToken.startPtr, currentToken.length);
+	if (!checkToken(TokenType::IDENTIFIER))
+		throw std::runtime_error("expected function name");
+
+	std::string functionName(currentToken.startPtr, currentToken.length);
 	process();
 
 	expectManagement(TokenType::LPAREN, "expected '('");
-	expectManagement(TokenType::RPAREN, "expected ')'"); 
+	std::vector<Parameter> params;
 
+	if (!checkToken(TokenType::RPAREN))
+	{       
+
+		do 
+		{
+			
+			if (!checkToken(TokenType::IDENTIFIER))
+				throw std::runtime_error("expected parameter name");
+
+			std::string pName(currentToken.startPtr, currentToken.length);
+			process();
+
+			expectManagement(TokenType::COLON, "expected ':' after parameter name");
+			VariableType pType = parseType();               
+
+			params.push_back({ pName, pType });
+
+		} while (matcher(TokenType::COMMA));
+
+	}
+
+	expectManagement(TokenType::RPAREN, "expected ')'");
 	auto body = parseBlock();
 
-	return std::make_unique<FunctionDeclaration>(name, std::move(body));
+	auto functionNameResult = std::make_unique<FunctionDeclaration>(functionName, std::move(body));
+	functionNameResult->parameters = std::move(params);                   
+
+	return functionNameResult;
 
 }
 
@@ -96,6 +134,11 @@ std::unique_ptr<BlockStatement> Parser::parseBlock()
 
 std::unique_ptr<Statement> Parser::parseStatement()
 {
+
+	if (checkToken(TokenType::KEY_WORD_INT) ||
+		checkToken(TokenType::KEY_WORD_FLOAT) ||
+		checkToken(TokenType::KEY_WORD_CHAR))
+		return parseVariableDeclaration();          
 
 	if (checkToken(TokenType::KEY_WORD_IF)) return parseIf();
 	if (checkToken(TokenType::KEY_WORD_RETURN)) return parseReturn();
@@ -148,7 +191,7 @@ std::unique_ptr<Expression> Parser::parseExpression(int minPrecedence)
 	{
 
 		int precedence = priorityManagement(currentToken.type);
-		if (precedence < minPrecedence) break;
+		if (precedence == 0 || precedence < minPrecedence) break;
 
 		TokenType op = currentToken.type;
 		process();
@@ -162,20 +205,38 @@ std::unique_ptr<Expression> Parser::parseExpression(int minPrecedence)
 
 }
 
-std::unique_ptr<Expression> Parser::parsePrimary() 
+std::unique_ptr<Expression> Parser::parsePrimary()
 {
 
-	if (checkToken(TokenType::IDENTIFIER)) 
+	if (checkToken(TokenType::IDENTIFIER))
 	{
 
 		std::string name(currentToken.startPtr, currentToken.length);
 		process();
 
-		return std::make_unique<IdentifierExpression>(name);
+		if (checkToken(TokenType::LPAREN)) 
+		{
+
+			process();                                  
+			std::vector<std::unique_ptr<Expression>> arguments;
+
+			if (!checkToken(TokenType::RPAREN)) 
+			{
+
+				do { arguments.push_back(parseExpression()); } while (matcher(TokenType::COMMA));
+
+			}
+
+			expectManagement(TokenType::RPAREN, "expected ')'");
+			return std::make_unique<CallExpression>(name, std::move(arguments));
+
+		}
+
+		return std::make_unique<IdentifierExpression>(std::string(name));
 
 	}
 
-	if (checkToken(TokenType::INT)) 
+	if (checkToken(TokenType::INT))
 	{
 
 		std::string text(currentToken.startPtr, currentToken.length);
@@ -195,17 +256,46 @@ std::unique_ptr<Expression> Parser::parsePrimary()
 
 	}
 
-	if (matcher(TokenType::LPAREN)) 
+	if (checkToken(TokenType::CHAR_LITERAL)) 
 	{
 
-		auto resultExpression = parseExpression();
+		std::string text(currentToken.startPtr, currentToken.length);
+		process();
+
+		return std::make_unique<CharLitExpression>(text); 
+
+	}
+
+	if (matcher(TokenType::LPAREN))
+	{
+
+		auto expression = parseExpression();
 		expectManagement(TokenType::RPAREN, "expected ')'");
 
-		return resultExpression;
+		return expression;
 
 	}
 
 	throw std::runtime_error("unexpected token in primary expression");
+
+}
+
+std::unique_ptr<Statement> Parser::parseVariableDeclaration() 
+{
+
+	VariableType variableType = parseType();
+
+	if (!checkToken(TokenType::IDENTIFIER))
+		throw std::runtime_error("expected variable name");
+
+	std::string variableName(currentToken.startPtr, currentToken.length);
+	process();
+
+	std::unique_ptr<Expression> init = nullptr;
+	if (matcher(TokenType::ASSIGN)) init = parseExpression();
+	expectManagement(TokenType::SEMICOLON, "';'");
+
+	return std::make_unique<VariableDeclaration>(variableName, variableType, std::move(init));
 
 }
 
