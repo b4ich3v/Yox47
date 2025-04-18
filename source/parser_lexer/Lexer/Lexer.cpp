@@ -3,13 +3,14 @@
 Token::Token(TokenType type, const char* startPtr, uint32_t length, uint32_t currentLine, uint32_t currentColumn):
 	type(type), startPtr(startPtr), length(length), currentLine(currentLine), currentColumn(currentColumn) {}
 
-Lexer::Lexer(const char* data)
+Lexer::Lexer(const char* data, size_t len)
 {
 
 	if (!data) throw std::logic_error("Invalid pointer data");
 
 	beginPtr = data;
-	endPtr = (data + (strlen(data)));
+	currentPtr = data;
+	endPtr = data + len;
 
 }
 
@@ -53,7 +54,7 @@ Token Lexer::generateToken(TokenType type, const char* ptr)
 {
 
 	if (!ptr) throw std::logic_error("Error");
-	return Token(type, ptr, strlen(ptr), currentLine, currentColumn);
+	return Token(type, ptr, (uint32_t)(currentPtr - ptr), currentLine, currentColumn);
 
 }
 
@@ -113,6 +114,8 @@ Token Lexer::nextToken()
 	case ',':  return generateToken(TokenType::COMMA, tokenStart);
 	case '!':  return generateToken(match('=') ? TokenType::NEGATIVE_EQUAL : TokenType::END_OF_FILE, tokenStart);
 	case '=':  return generateToken(match('=') ? TokenType::EQUAL_EQUAL : TokenType::ASSIGN, tokenStart);
+	case ':': return generateToken(TokenType::COLON, tokenStart);
+	case '\'': return character(tokenStart);
 	default:
 
 		if (isAlnum(currentSymbol) || currentSymbol == '_') return identifier(tokenStart);
@@ -150,6 +153,19 @@ Token Lexer::number(const char* ptr)
 
 	if (isFloat) return generateToken(TokenType::FLOAT, ptr);
 	else return generateToken(TokenType::INT, ptr);
+
+}
+
+Token Lexer::character(const char* ptr) 
+{
+	
+	if (peek() == '\\\\') { process(); process(); } 
+	else process();
+
+	if (peek() != '\'') throw std::runtime_error("unterminated char literal");
+	process(); 
+
+	return generateToken(TokenType::CHAR_LITERAL, ptr);
 
 }
 
@@ -195,15 +211,15 @@ char Lexer::peekNext()
 void Lexer::tokenize() 
 {
 
-	const char* iter = beginPtr;
-	Token currentToken;
+	tokens.reserve((endPtr - beginPtr) / 2);
 
-	while (iter != endPtr) 
+	for (;;)
 	{
 
-		currentToken = nextToken();
+		Token currentToken = nextToken();
 		tokens.push_back(currentToken);
-		iter += 1;
+
+		if (currentToken.type == TokenType::END_OF_FILE) break;
 
 	}
 
