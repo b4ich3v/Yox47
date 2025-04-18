@@ -1,38 +1,46 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <memory>
+#include <cstring>
 #include <unordered_map>
 #pragma once
 
 enum class TokenType : uint8_t 
 {
 
-    NO_TYPE = -1,
+    NO_TYPE = 0,
 
-    END_OF_FILE = 0,
-    IDENTIFIER = 1,
-    INT = 2,
-    FLOAT = 3,
+    END_OF_FILE = 1,
+    IDENTIFIER = 2,
+    INT = 3,
+    FLOAT = 4,
    
-    KEY_WORD_IF = 4, 
-    KEY_WORD_ELSE = 5, 
-    KEY_WORD_FUNCTION = 6, 
-    KEY_WORD_RETURN = 7,
+    KEY_WORD_IF = 5, 
+    KEY_WORD_ELSE = 6, 
+    KEY_WORD_FUNCTION = 7, 
+    KEY_WORD_RETURN = 8,
+    KEY_WORD_INT = 9,
+    KEY_WORD_FLOAT = 10,
+    KEY_WORD_CHAR = 11,
 
-    PLUS = 8,     
-    MINUS = 9,    
-    STAR = 10,     
-    SLASH = 11,    
-    LPAREN = 12,   
-    RPAREN = 13,   
-    LBRACE = 14,  
-    RBRACE = 15,   
-    SEMICOLON = 16,
-    COMMA= 17, 
+    COLON = 12,
+    CHAR_LITERAL = 13,
 
-    EQUAL_EQUAL = 18, 
-    NEGATIVE_EQUAL = 19,  
-    ASSIGN = 20
+    PLUS = 14,
+    MINUS = 15,
+    STAR = 16,
+    SLASH = 17,
+    LPAREN = 18,
+    RPAREN = 19,
+    LBRACE = 20,
+    RBRACE = 21,
+    SEMICOLON = 22,
+    COMMA= 23,
+
+    EQUAL_EQUAL = 24,
+    NEGATIVE_EQUAL = 25,
+    ASSIGN = 26
 
 };
 
@@ -42,7 +50,10 @@ static std::unordered_map<std::string, TokenType> hashedKeywords =
     {"if", TokenType::KEY_WORD_IF},
     {"else", TokenType::KEY_WORD_ELSE},
     {"function", TokenType::KEY_WORD_FUNCTION},
-    {"return", TokenType::KEY_WORD_RETURN}
+    {"return", TokenType::KEY_WORD_RETURN},
+    {"int",   TokenType::KEY_WORD_INT},
+    {"float", TokenType::KEY_WORD_FLOAT},
+    {"char",  TokenType::KEY_WORD_CHAR},
 
 };
 
@@ -96,9 +107,11 @@ private:
 
     Token number(const char* ptr);
 
+    Token character(const char* ptr);
+
 public:
 
-    Lexer(const char* data);
+    Lexer(const char* data, size_t len);
 
     Token nextToken();
 
