@@ -8,3 +8,6 @@ FloatLitExpression::FloatLitExpression(const std::string& text): Expression(Node
 
 BinaryExpression::BinaryExpression(const TokenType& oper, std::unique_ptr<Expression> left, std::unique_ptr<Expression> right): 
 	Expression(NodeType::BINARY_EXPRESSION), oper(oper), left(std::move(left)), right(std::move(right)) {}
+
+CharLitExpression::CharLitExpression(const std::string& text)
+	: Expression(NodeType::CHAR_LITERAL), text(text) {}
