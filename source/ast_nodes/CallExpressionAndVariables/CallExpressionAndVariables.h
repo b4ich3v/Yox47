@@ -1,22 +1,22 @@
 #include "Statements.h"
 #pragma once
 
-enum class VariableType: uint8_t { Int, Float, Char };
+enum class VariableType : uint8_t { Int, Float, Char, Bool, Box };
 
-struct VariableDeclaration: public Statement 
+struct VariableDeclaration: public Statement
 {
 public:
 
     std::string name;
     VariableType type;
-    std::unique_ptr<Expression> init;  
+    std::unique_ptr<Expression> init;
 
     VariableDeclaration(const std::string& name, VariableType type,
         std::unique_ptr<Expression> init);
 
 };
 
-struct Parameter 
+struct Parameter
 {
 public:
 
