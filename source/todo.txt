@@ -5,3 +5,6 @@
 5. * Implementation of pointers, references and dynamic memory
 6. Better organization of variable life
 7. Implementation of bit manipulation, through bitwise operations
+8. Another operators
+9. Better system for namespace conflicts between blocks
+10. Implementation for creating more complex types from primitive ones and possibly access rights on them
