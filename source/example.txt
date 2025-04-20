@@ -1,0 +1,36 @@
+function main() {
+    int sumVal = 0;
+    float pi = 3.1415;
+    char c = 'A';
+    bool flag = true;
+
+    box arr[4] = { sumVal, 2, 'B', false };
+
+    for (int i = 0; i < 4; i = i + 1) {
+        if (i == 2) break;
+        sumVal = sumVal + arr[i];
+    }
+
+    int j = 0;
+    while (!(j == sumVal) && j < 10) {
+        j = j + 1;
+    }
+
+    box bools[3] = { true, false, true };
+    bool b1 = flag || (sumVal > 10);
+    bool b2 = b1 && bools[0];
+
+    choose (sumVal) {
+        case 1:  sumVal = sumVal + 100;
+        case 2:  sumVal = sumVal + 10;
+        default: sumVal = sumVal;
+    }
+
+    {
+        int sumVal = 42;
+        bool inside = true;
+        if (inside) sumVal = sumVal + 1;
+    }
+
+    return sumVal;
+}
