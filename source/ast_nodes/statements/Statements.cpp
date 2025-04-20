@@ -1,13 +1,221 @@
-#include "Statements.h"
+#include "Semantic.h"
+#include <stdexcept>
 
-ExpressionStatement::ExpressionStatement(std::unique_ptr<Expression> expression) :
-	Statement(NodeType::EXPRESSION_STATEMENT), expression(std::move(expression)) {}
+void ScopedSymbolTable::enter()
+{
 
-ReturnStatement::ReturnStatement(std::unique_ptr<Expression> value) :
-	Statement(NodeType::RETURN_STATEMENT), value(std::move(value)) {}
+    stack.emplace_back();
 
-IfStatement::IfStatement(std::unique_ptr<Expression> condition,
-	std::unique_ptr<Statement> thenC, std::unique_ptr<Statement> elseC) :
-	Statement(NodeType::IF_STATEMENT), condition(std::move(condition)), thenConsequence(std::move(thenC)), elseConsequence(std::move(elseC)) {}
+}
 
-BlockStatement::BlockStatement() : Statement(NodeType::BLOCK_STATEMENT) {}
+void ScopedSymbolTable::leave()
+{
+
+    stack.pop_back();
+
+}
+
+void ScopedSymbolTable::declare(const std::string& name, VariableType type)
+{
+
+    auto& currentScope = stack.back();
+    if (currentScope.count(name))  throw std::runtime_error("redeclaration of variable '" + name + "'");
+    currentScope[name] = VariableInfo{ type };
+
+}
+
+const VariableInfo* ScopedSymbolTable::findVariable(const std::string& name) const
+{
+
+    for (auto iter = stack.rbegin(); iter != stack.rend(); iter++)
+    {
+
+        auto iterSymbolManipulation = iter->find(name);
+        if (iterSymbolManipulation != iter->end()) return &iterSymbolManipulation->second;
+
+    }
+
+    return nullptr;
+
+}
+
+void SemanticChecker::check(Program* program)
+{
+
+    for (auto& currentFunction : program->functions) visit(currentFunction.get());
+
+}
+
+void SemanticChecker::visit(Node* node)
+{
+
+    switch (node->type)
+    {
+
+    case NodeType::PROGRAM: visit((Program*)(node)); break;
+    case NodeType::FUNCTION_DECLARATION: visit((FunctionDeclaration*)(node)); break;
+    case NodeType::BLOCK_STATEMENT: visit((BlockStatement*)(node)); break;
+    case NodeType::VARIABLE_DECLARATION: visit((VariableDeclaration*)(node)); break;
+    case NodeType::EXPRESSION_STATEMENT: visit((ExpressionStatement*)(node)); break;
+    case NodeType::RETURN_STATEMENT: visit((ReturnStatement*)(node)); break;
+    case NodeType::IF_STATEMENT: visit((IfStatement*)(node)); break;
+    case NodeType::WHILE_STATEMENT: visit((WhileStatement*)(node)); break;
+    case NodeType::FOR_STATEMENT: visit((ForStatement*)(node)); break;
+    case NodeType::BREAK_STATEMENT: visit((BreakStatement*)(node)); break;
+    case NodeType::BOX_LITERAL: visit((BoxLiteral*)(node)); break;
+    case NodeType::INDEX_EXPRESSION: visit((IndexExpression*)(node)); break;
+    case NodeType::CALL_EXPRESSION: visit((CallExpression*)(node)); break;
+    case NodeType::UNARY_EXPRESSION: visit((UnaryExpression*)(node)); break;
+    case NodeType::BINARY_EXPRESSION: visit((BinaryExpression*)(node)); break;
+    case NodeType::IDENTIFIER: visit((IdentifierExpression*)(node)); break;
+    case NodeType::CHOOSE_STATEMENT: visit((ChooseStatement*)(node)); break;
+    case NodeType::INT_LITERAL:
+    case NodeType::FLOAT_LITERAL:
+    case NodeType::BOOL_LITERAL:
+    case NodeType::CHAR_LITERAL: break;
+    default: break;
+
+    }
+
+}
+
+void SemanticChecker::visit(Program* program)
+{
+
+    for (auto& currentFunction : program->functions) visit(currentFunction.get());
+
+}
+
+void SemanticChecker::visit(FunctionDeclaration* functionDeclaration)
+{
+
+    symbols.enter();
+    for (auto& currentParam : functionDeclaration->parameters) symbols.declare(std::string(currentParam.name), currentParam.type);
+    visit(functionDeclaration->body.get());
+    symbols.leave();
+
+}
+
+void SemanticChecker::visit(BlockStatement* blockStatement)
+{
+
+    symbols.enter();
+    for (auto& currentStatement : blockStatement->statements) visit(currentStatement.get());
+    symbols.leave();
+
+}
+
+void SemanticChecker::visit(VariableDeclaration* variableDeclaration)
+{
+
+    symbols.declare(variableDeclaration->name, variableDeclaration->type);
+    if (variableDeclaration->init) visit(variableDeclaration->init.get());
+
+}
+
+void SemanticChecker::visit(ExpressionStatement* expressionStatement)
+{
+
+    visit(expressionStatement->expression.get());
+
+}
+
+void SemanticChecker::visit(ReturnStatement* returnStatement)
+{
+
+    if (returnStatement->value) visit(returnStatement->value.get());
+
+}
+
+void SemanticChecker::visit(IfStatement* ifStatement)
+{
+
+    visit(ifStatement->condition.get());
+    visit(ifStatement->thenConsequence.get());
+
+    if (ifStatement->elseConsequence) visit(ifStatement->elseConsequence.get());
+
+}
+
+void SemanticChecker::visit(WhileStatement* whileStatement)
+{
+
+    visit(whileStatement->condition.get());
+    visit(whileStatement->body.get());
+
+}
+
+void SemanticChecker::visit(ForStatement* forStatement)
+{
+
+    if (forStatement->init) visit(forStatement->init.get());
+    if (forStatement->condition) visit(forStatement->condition.get());
+    if (forStatement->post) visit(forStatement->post.get());
+
+    visit(forStatement->body.get());
+
+}
+
+void SemanticChecker::visit(BreakStatement* breakStatement) {}
+
+void SemanticChecker::visit(BoxLiteral* boxLiteral)
+{
+
+    for (auto& currentElement : boxLiteral->elements) visit(currentElement.get());
+
+}
+
+void SemanticChecker::visit(IndexExpression* indexExpression)
+{
+
+    visit(indexExpression->base.get());
+    visit(indexExpression->index.get());
+
+}
+
+void SemanticChecker::visit(CallExpression* callExpression)
+{
+
+    for (auto& currentArgument : callExpression->arguments) visit(currentArgument.get());
+
+}
+
+void SemanticChecker::visit(UnaryExpression* unaryExpression)
+{
+
+    visit(unaryExpression->operand.get());
+
+}
+
+void SemanticChecker::visit(BinaryExpression* binaryExpression)
+{
+
+    visit(binaryExpression->left.get());
+    visit(binaryExpression->right.get());
+
+}
+
+void SemanticChecker::visit(ChooseStatement* chooseStatement)
+{
+
+    visit(chooseStatement->expression.get());
+
+    for (auto& currentCase : chooseStatement->cases)
+    {
+
+        visit(currentCase.test.get());
+        visit(currentCase.body.get());
+
+    }
+
+    if (chooseStatement->defaultCase) visit(chooseStatement->defaultCase.get());
+
+}
+
+void SemanticChecker::visit(IdentifierExpression* id)
+{
+
+    if (!symbols.findVariable(id->name))
+        throw std::runtime_error("undeclared identifier: " + std::string(id->name));
+
+}
