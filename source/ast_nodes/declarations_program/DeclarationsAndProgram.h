@@ -15,7 +15,7 @@ public:
 
 };
 
-struct Program: public Node 
+struct Program: public Node
 {
 public:
 
@@ -24,4 +24,3 @@ public:
     Program();
 
 };
-
