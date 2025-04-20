@@ -4,3 +4,4 @@
 4. Inconsistencies in еdge cases
 5. * Implementation of pointers, references and dynamic memory
 6. Better organization of variable life
+7. Implementation of bit manipulation, through bitwise operations
