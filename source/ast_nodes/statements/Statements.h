@@ -1,83 +1,110 @@
-#include <unordered_map>
-#include <vector>
-#include <string>
 #include "Node.h"
-#include "CallExpressionAndVariables.h"
-#include "DeclarationsAndProgram.h"
+#include <vector>
+#include "Expressions.h"
 #pragma once
 
-struct VariableInfo
+struct Statement : Node { using Node::Node; };
+
+struct ExpressionStatement: public Statement
 {
 public:
 
-    VariableType type;
+    std::unique_ptr<Expression> expression;
+
+    ExpressionStatement(std::unique_ptr<Expression> expression);
 
 };
 
-using Scope = std::unordered_map<std::string, VariableInfo>;
-
-class ScopedSymbolTable
+struct ReturnStatement: public Statement
 {
-private:
-
-    std::vector<Scope> stack{ 1 };
-
 public:
 
-    void enter();
+    std::unique_ptr<Expression> value;
 
-    void leave();
-
-    void declare(const std::string& name, VariableType type);
-
-    const VariableInfo* findVariable(const std::string& name) const;
+    ReturnStatement(std::unique_ptr<Expression> value);
 
 };
 
-class SemanticChecker
+struct IfStatement: public Statement
 {
-private:
-
-    ScopedSymbolTable symbols;
-
-    void visit(Node* node);
-
-    void visit(Program* program);
-
-    void visit(FunctionDeclaration* functionDeclaration);
-
-    void visit(BlockStatement* blockStatement);
-
-    void visit(VariableDeclaration* variableDeclaration);
-
-    void visit(ExpressionStatement* expressionStatement);
-
-    void visit(ReturnStatement* returnStatement);
-
-    void visit(IfStatement* ifStatement);
-
-    void visit(WhileStatement* whileStatement);
-
-    void visit(ForStatement* forStatement);
-
-    void visit(BreakStatement* breakStatement);
-
-    void visit(BoxLiteral* boxLiteral);
-
-    void visit(IndexExpression* indexExpression);
-
-    void visit(CallExpression* callExpression);
-
-    void visit(UnaryExpression* unaryExpression);
-
-    void visit(BinaryExpression* binaryExpression);
-
-    void visit(ChooseStatement* chooseStatement);
-
-    void visit(IdentifierExpression* id);
-
 public:
 
-    void check(Program* program);
+    std::unique_ptr<Expression> condition;
+    std::unique_ptr<Statement> thenConsequence;
+    std::unique_ptr<Statement> elseConsequence;
+
+    IfStatement(std::unique_ptr<Expression> condition,
+        std::unique_ptr<Statement> thenC, std::unique_ptr<Statement> elseC);
+
+};
+
+struct BlockStatement: public Statement
+{
+public:
+
+    std::vector<std::unique_ptr<Statement>> statements;
+
+    BlockStatement();
+
+};
+
+struct BreakStatement: public Statement
+{
+public:
+
+    BreakStatement();
+
+};
+
+struct WhileStatement: public Statement
+{
+public:
+
+    std::unique_ptr<Expression> condition;
+    std::unique_ptr<Statement> body;
+
+    WhileStatement(std::unique_ptr<Expression> condition,
+        std::unique_ptr<Statement> body);
+
+};
+
+struct ForStatement: public Statement
+{
+public:
+
+    std::unique_ptr<Statement> init;
+    std::unique_ptr<Expression> condition;
+    std::unique_ptr<Expression> post;
+    std::unique_ptr<Statement> body;
+
+    ForStatement(std::unique_ptr<Statement> init,
+        std::unique_ptr<Expression> condition,
+        std::unique_ptr<Expression> post,
+        std::unique_ptr<Statement> body);
+
+};
+
+struct CaseClause
+{
+public:
+
+    std::unique_ptr<Expression> test;
+    std::unique_ptr<Statement> body;
+
+    CaseClause(std::unique_ptr<Expression> test, std::unique_ptr<Statement> body);
+
+};
+
+struct ChooseStatement: public Statement
+{
+public:
+
+    std::unique_ptr<Expression> expression;
+    std::vector<CaseClause> cases;
+    std::unique_ptr<Statement> defaultCase;
+
+    ChooseStatement(std::unique_ptr<Expression> expression,
+        std::vector<CaseClause> cases,
+        std::unique_ptr<Statement> defaultCase);
 
 };
