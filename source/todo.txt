@@ -1,1 +1,6 @@
-
+1. Managing the return type of functions
+2. Function call prioritization, via stack frame and exit status
+3. Type casting
+4. Inconsistencies in еdge cases
+5. * Implementation of pointers, references and dynamic memory
+6. Better organization of variable life
