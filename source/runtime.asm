@@ -181,7 +181,7 @@ int_to_bool:
     mov rax, [rsp+8]
     cmp rax, 0
     sete al
-    xor al, 1 ; invert logic, 0 is false
+    xor al, 1 
     mov [rsp+16], al
     ret
 
@@ -191,7 +191,7 @@ float_to_bool:
     movsd xmm0, [rsp+8]
     xorpd xmm1, xmm1
     ucomisd xmm0, xmm1
-    setne al ; true if not equal 0.0
+    setne al 
     mov [rsp+16], al
     ret
 
