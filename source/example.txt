@@ -5,6 +5,7 @@ function main() {
     bool flag = true;
 
     box arr[4] = { sumVal, 2, 'B', false };
+    print(arr);
 
     for (int i = 0; i < 4; i = i + 1) {
         if (i == 2) break;
@@ -27,10 +28,13 @@ function main() {
     }
 
     {
+	print(sumVal);
         int sumVal = 42;
+        print(sumVal);
         bool inside = true;
         if (inside) sumVal = sumVal + 1;
     }
 
+    print(sumVal);
     return sumVal;
 }
