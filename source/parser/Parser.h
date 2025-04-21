@@ -1,8 +1,8 @@
-#include "Lexer.h"
-#include "DeclarationsAndProgram.h"
-#include "Statements.h"
-#include "Expressions.h"
-#include "CallExpressionAndVariables.h"
+#include "lexer/Lexer.h"
+#include "ast_nodes/declarations_and_program/DeclarationsAndProgram.h"
+#include "ast_nodes/statements/Statements.h"
+#include "ast_nodes/expressions/Expressions.h"
+#include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
 #pragma once
 
 class Parser
