@@ -3,6 +3,7 @@
 #include "Statements.h"
 #include "CallExpressionAndVariables.h"
 #include <fstream>
+#include <string>
 #pragma once
 
 class CodeGenerator 
@@ -11,16 +12,18 @@ private:
 
     Program* root;
     std::ofstream file;
+    std::unordered_map<std::string, int> localOffsets;
+    int currentStackOffset;
 
-    void emit(const std::string& text);
+    void generateLine(const std::string& text);
 
-    void genProgram(Program* program);
+    void generateProgram(Program* program);
 
-    void genFunction(FunctionDeclaration* functionDeclaration);
+    void generateFunction(FunctionDeclaration* functionDeclaration);
 
-    void genStatement(Statement* statement);
+    void generateStatement(Statement* statement);
 
-    void genExpression(Expression* expression);
+    void generateExpression(Expression* expression);
 
 public:
 
@@ -29,4 +32,3 @@ public:
     void generate();
 
 };
-
