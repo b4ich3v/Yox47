@@ -1,6 +1,6 @@
-#include "Node.h"
-#include "Statements.h"
-#include "CallExpressionAndVariables.h"
+#include "ast_nodes/node/Node.h"
+#include "statements/Statements.h"
+#include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
 #pragma once
 
 struct FunctionDeclaration: public Node
