@@ -8,10 +8,10 @@ global print_int
 print_int:
     push rbp
     mov rbp, rsp
-    sub rsp, 32  ; stack alignment
+    sub rsp, 32  
 
     mov rdi, int_fmt
-    mov rsi, [rbp+16] ; first argument
+    mov rsi, [rbp+16] 
     xor rax, rax
     call printf
 
