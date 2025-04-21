@@ -1,9 +1,9 @@
+#include "ast_nodes/node/Node.h"
+#include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
+#include "ast_nodes/declarations_and_program/DeclarationsAndProgram.h"
 #include <unordered_map>
 #include <vector>
 #include <string>
-#include "Node.h"
-#include "CallExpressionAndVariables.h"
-#include "DeclarationsAndProgram.h"
 #pragma once
 
 struct VariableInfo
