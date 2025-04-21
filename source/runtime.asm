@@ -89,7 +89,6 @@ print_box:
     xor rax, rax
     call printf
 
-    ; RCX - брой елементи
     mov rcx, [rdi] 
     add rdi, 8     
 
