@@ -1,4 +1,4 @@
-#include "statements/Statements.h"
+#include "ast_nodes/statements/Statements.h"
 #pragma once
 
 enum class VariableType : uint8_t { Int, Float, Char, Bool, Box };
