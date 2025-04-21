@@ -1,4 +1,4 @@
-#include "source/lexer/Lexer.h"
+#include "lexer/Lexer.h"
 #include "ast_nodes/declarations_and_program/DeclarationsAndProgram.h"
 #include "ast_nodes/statements/Statements.h"
 #include "ast_nodes/expressions/Expressions.h"
