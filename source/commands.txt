@@ -1,0 +1,11 @@
+g++ -std=c++17 -o compiler main.cpp \
+    source/lexer/*.cpp \
+    source/parser/*.cpp \
+    source/semantic/*.cpp \
+    source/ast_nodes/*.cpp \
+    source/code_generator/*.cpp
+
+nasm -f elf64 -o out.o out.asm
+nasm -f elf64 -o runtime.o runtime.asm
+g++ -no-pie -o program out.o runtime.o
+./program
