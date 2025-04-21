@@ -5,6 +5,7 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "Semantic.h"
+#include "CodeGenerator.h"
 
 int main()
 {
@@ -18,41 +19,22 @@ int main()
     {
 
         Lexer lexer(source.c_str(), source.size());
-
-        for (;;) 
-        {        
-            
-            Token currentToken = lexer.nextToken();
-            std::cout << (int)(currentToken.type) << "  ["
-                << std::string(currentToken.startPtr, currentToken.length) << "]" << std::endl;;
-            if (currentToken.type == TokenType::END_OF_FILE) break;
-
-        }
-
         Parser parser(lexer);
         std::unique_ptr<Program> ast = parser.parseProgram();
+
         SemanticChecker checker;
+        checker.check(ast.get());
 
-        try 
-        {
+        CodeGenerator generator(ast.get(), "out.asm");
+        generator.generate();
 
-            checker.check(ast.get());
-            std::cout << "OK!" << std::endl;
-
-        }
-        catch (const std::exception& e1)
-        {
-
-            std::cerr << "Semantic error: " << e1.what() << std::endl;
-            return 1;
-
-        }
+        std::cout << "OK!" << std::endl;
 
     }
-    catch (const std::exception& e2) 
+    catch (const std::exception& e) 
     {
 
-        std::cerr << "Parse error: " << e2.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
 
     }
