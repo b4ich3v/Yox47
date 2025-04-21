@@ -4,6 +4,8 @@
 #include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
 #include <fstream>
 #include <string>
+#include <unordered_map>
+#include <stack>
 #pragma once
 
 class CodeGenerator 
