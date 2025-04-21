@@ -1,6 +1,4 @@
 #include "CodeGenerator.h"
-#include <unordered_map>
-#include <stack>
 
 CodeGenerator::CodeGenerator(Program* root, const std::string& file):
     root(root), file(file), currentStackOffset(0) {}
