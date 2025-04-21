@@ -1,5 +1,5 @@
-#include "Node.h"
-#include "Lexer.h"
+#include "ast_nodes/node/Node.h"
+#include "lexer/Lexer.h"
 #include <string>
 #pragma once
 
