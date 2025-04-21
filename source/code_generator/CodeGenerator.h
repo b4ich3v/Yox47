@@ -1,7 +1,7 @@
-#include "DeclarationsAndProgram.h"
-#include "Expressions.h"
-#include "Statements.h"
-#include "CallExpressionAndVariables.h"
+#include "ast_nodes/declarations_and_program/DeclarationsAndProgram.h"
+#include "ast_nodes/expressions/Expressions.h"
+#include "ast_nodes/statements/Statements.h"
+#include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
 #include <fstream>
 #include <string>
 #pragma once
