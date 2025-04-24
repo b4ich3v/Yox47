@@ -1,9 +1,10 @@
-#include "ast_nodes/node/Node.h"
-#include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
-#include "ast_nodes/declarations_and_program/DeclarationsAndProgram.h"
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <optional>
+#include "Node.h"
+#include "CallExpressionAndVariables.h"
+#include "DeclarationsAndProgram.h"
 #pragma once
 
 struct VariableInfo
@@ -39,6 +40,11 @@ class SemanticChecker
 private:
 
     ScopedSymbolTable symbols;
+    std::optional<VariableType> currentReturnType;
+    int loopDepth = 0;
+    int chooseDepth = 0;
+
+    VariableType evalType(Expression* e);
 
     void visit(Node* node);
 
