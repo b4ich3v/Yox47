@@ -1,7 +1,5 @@
-nasm -f win64 out.asm -o out.obj
-link out.obj /SUBSYSTEM:CONSOLE /ENTRY:_start ^
-    /DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib ^
-    /NODEFAULTLIB:libcmt.lib /OUT:prog.exe
-
+nasm -f win64 runtime.asm -o runtime.o
+nasm -f win64 out.asm     -o out.o
+gcc runtime.o out.o -o prog.exe -nostartfiles -Wl,--subsystem,console
 prog.exe
 pause
