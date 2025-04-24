@@ -1,7 +1,7 @@
-#include "ast_nodes/statements/Statements.h"
+#include "Statements.h"
 #pragma once
 
-enum class VariableType : uint8_t { Int, Float, Char, Bool, Box };
+enum class VariableType : uint8_t { Int, Float, Char, Bool, Box, Void };
 
 struct VariableDeclaration: public Statement
 {
@@ -36,3 +36,5 @@ public:
         std::vector<std::unique_ptr<Expression>> arguments);
 
 };
+
+
