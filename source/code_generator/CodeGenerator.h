@@ -16,6 +16,7 @@ private:
     std::ofstream file;
     int currentStackOffset;
 
+    std::stack<std::string> breakLabels;
     std::unordered_map<std::string, int> localOffsets;
     std::unordered_map<std::string, std::string> floatPool;
     
@@ -34,5 +35,7 @@ public:
     explicit CodeGenerator(Program* root, const std::string& fileName);
 
     void generate();
+
+    static const char* typeTag(NodeType type);
 
 };
