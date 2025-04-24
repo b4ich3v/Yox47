@@ -1,6 +1,47 @@
 #include "Semantic.h"
 #include <stdexcept>
 
+VariableType SemanticChecker::evalType(Expression* expression)
+{
+
+    switch (expression->type)
+    {
+
+    case NodeType::INT_LITERAL: return VariableType::Int;
+    case NodeType::FLOAT_LITERAL: return VariableType::Float;
+    case NodeType::CHAR_LITERAL: return VariableType::Char;
+    case NodeType::BOOL_LITERAL: return VariableType::Bool;
+    case NodeType::BOX_LITERAL: return VariableType::Box;
+    case NodeType::IDENTIFIER: 
+    {
+
+        auto id = (IdentifierExpression*)(expression);
+        const VariableInfo* variable = symbols.findVariable(id->name);
+
+        if (!variable) throw std::runtime_error("undeclared identifier " + id->name);
+        return variable->type;
+
+    }
+    case NodeType::BINARY_EXPRESSION: 
+    {
+
+        auto binaryExpression = (BinaryExpression*)(expression);
+        return evalType(binaryExpression->left.get());      
+
+    }
+    case NodeType::UNARY_EXPRESSION: 
+    {
+
+        auto unaryExpression = (UnaryExpression*)(expression);
+        return evalType(unaryExpression->operand.get());
+
+    }
+    default: return VariableType::Int; 
+
+    }
+
+}
+
 void ScopedSymbolTable::enter()
 {
 
@@ -42,7 +83,7 @@ const VariableInfo* ScopedSymbolTable::findVariable(const std::string& name) con
 void SemanticChecker::check(Program* program)
 {
 
-    for (auto& currentFunction : program->functions) visit(currentFunction.get());
+    visit(program);
 
 }
 
@@ -91,7 +132,11 @@ void SemanticChecker::visit(FunctionDeclaration* functionDeclaration)
 
     symbols.enter();
     for (auto& currentParam : functionDeclaration->parameters) symbols.declare(std::string(currentParam.name), currentParam.type);
+
+    currentReturnType = functionDeclaration->returnType;
     visit(functionDeclaration->body.get());
+    currentReturnType.reset();
+
     symbols.leave();
 
 }
@@ -123,7 +168,20 @@ void SemanticChecker::visit(ExpressionStatement* expressionStatement)
 void SemanticChecker::visit(ReturnStatement* returnStatement)
 {
 
+
+    if (!currentReturnType) throw std::runtime_error("return outside of function");
     if (returnStatement->value) visit(returnStatement->value.get());
+    if (!returnStatement->value && *currentReturnType != VariableType::Void) throw std::runtime_error("missing return value");
+    
+    if (returnStatement->value)
+    {
+
+        VariableType actual = evalType(returnStatement->value.get());
+
+        if (actual != *currentReturnType)
+            throw std::runtime_error("return type mismatch");
+
+    }
 
 }
 
@@ -141,7 +199,9 @@ void SemanticChecker::visit(WhileStatement* whileStatement)
 {
 
     visit(whileStatement->condition.get());
+    loopDepth += 1;
     visit(whileStatement->body.get());
+    loopDepth -= 1;
 
 }
 
@@ -152,11 +212,19 @@ void SemanticChecker::visit(ForStatement* forStatement)
     if (forStatement->condition) visit(forStatement->condition.get());
     if (forStatement->post) visit(forStatement->post.get());
 
+    loopDepth += 1;
     visit(forStatement->body.get());
+    loopDepth -= 1;
 
 }
 
-void SemanticChecker::visit(BreakStatement* breakStatement) {}
+void SemanticChecker::visit(BreakStatement*)
+{
+
+    if (loopDepth == 0 && chooseDepth == 0)
+        throw std::runtime_error("'break' outside loop/choose");
+
+}
 
 void SemanticChecker::visit(BoxLiteral* boxLiteral)
 {
@@ -199,6 +267,7 @@ void SemanticChecker::visit(ChooseStatement* chooseStatement)
 {
 
     visit(chooseStatement->expression.get());
+    chooseDepth += 1;
 
     for (auto& currentCase : chooseStatement->cases)
     {
@@ -209,6 +278,7 @@ void SemanticChecker::visit(ChooseStatement* chooseStatement)
     }
 
     if (chooseStatement->defaultCase) visit(chooseStatement->defaultCase.get());
+    chooseDepth -= 1;
 
 }
 
