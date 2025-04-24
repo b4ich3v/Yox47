@@ -1,6 +1,6 @@
-#include "ast_nodes/node/Node.h"
-#include "statements/Statements.h"
-#include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
+#include "Node.h"
+#include "Statements.h"
+#include "CallExpressionAndVariables.h"
 #pragma once
 
 struct FunctionDeclaration: public Node
@@ -9,9 +9,11 @@ public:
 
     std::string name;
     std::vector<Parameter> parameters;
+    VariableType returnType;
     std::unique_ptr<BlockStatement> body;
 
-    FunctionDeclaration(std::string name, std::unique_ptr<BlockStatement> body);
+    FunctionDeclaration(std::string name, VariableType returnType,
+        std::unique_ptr<BlockStatement> body);
 
 };
 
@@ -24,3 +26,4 @@ public:
     Program();
 
 };
+
