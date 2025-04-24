@@ -237,3 +237,60 @@ void Lexer::tokenize()
 	}
 
 }
+
+const char* Lexer::tokenName(TokenType type)
+{
+
+	switch (type)
+	{
+
+	case TokenType::NO_TYPE: return "NO_TYPE";
+	case TokenType::END_OF_FILE: return "EOF";
+	case TokenType::INT: return "INT_LIT";
+	case TokenType::FLOAT: return "FLOAT_LIT";
+	case TokenType::IDENTIFIER: return "IDENTIFIER";
+	case TokenType::CHAR_LITERAL: return "CHAR_LIT";
+	case TokenType::BOOL_LITERAL: return "BOOL_LIT";
+	case TokenType::KEY_WORD_IF: return "KW_IF";
+	case TokenType::KEY_WORD_ELSE: return "KW_ELSE";
+	case TokenType::KEY_WORD_CHOOSE: return "KW_CHOOSE";
+	case TokenType::KEY_WORD_CASE: return "KW_CASE";
+	case TokenType::KEY_WORD_DEFAULT: return "KW_DEFAULT";
+	case TokenType::KEY_WORD_FUNCTION: return "KW_FUNCTION";
+	case TokenType::KEY_WORD_RETURN: return "KW_RETURN";
+	case TokenType::KEY_WORD_INT: return "KW_INT";
+	case TokenType::KEY_WORD_FLOAT: return "KW_FLOAT";
+	case TokenType::KEY_WORD_BOOL: return "KW_BOOL";
+	case TokenType::KEY_WORD_BOX: return "KW_BOX";
+	case TokenType::KEY_WORD_CHAR: return "KW_CHAR";
+	case TokenType::KEY_WORD_FOR: return "KW_FOR";
+	case TokenType::KEY_WORD_WHILE: return "KW_WHILE";
+	case TokenType::KEY_WORD_BREAK: return "KW_BREAK";
+	case TokenType::PLUS: return "PLUS";          
+	case TokenType::MINUS: return "MINUS";         
+	case TokenType::STAR: return "STAR";          
+	case TokenType::SLASH: return "SLASH";         
+	case TokenType::EQUAL_EQUAL: return "EQ_EQ";         
+	case TokenType::NOT_EQUAL: return "NOT_EQ";        
+	case TokenType::ASSIGN: return "ASSIGN";        
+	case TokenType::LESS:  return "LESS";          
+	case TokenType::LESS_EQUAL: return "LESS_EQ";       
+	case TokenType::GREATER: return "GREATER";       
+	case TokenType::GREATER_EQUAL: return "GREATER_EQ";    
+	case TokenType::LOGICAL_AND: return "LOGICAL_AND";   
+	case TokenType::LOGICAL_OR: return "LOGICAL_OR";   
+	case TokenType::NEGATION: return "NEGATION";      
+	case TokenType::SEMICOLON: return "SEMICOLON";    
+	case TokenType::COLON: return "COLON";         
+	case TokenType::COMMA: return "COMMA";         
+	case TokenType::LPAREN: return "LPAREN";        
+	case TokenType::RPAREN: return "RPAREN";       
+	case TokenType::LBRACE: return "LBRACE";        
+	case TokenType::RBRACE: return "RBRACE";        
+	case TokenType::LBRACKET: return "LBRACKET";      
+	case TokenType::RBRACKET: return "RBRACKET";      
+	default: return "UNKNOWN";
+
+	}
+
+}
