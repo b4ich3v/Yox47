@@ -1,40 +1,43 @@
-function main() {
-    int sumVal = 0;
-    float pi = 3.1415;
-    char c = 'A';
-    bool flag = true;
+function fib(n: int) int {
+    if (n == 0)  return 0;
+    if (n == 1)  return 1;
+    return fib(n - 1) + fib(n - 2);
+}
 
-    box arr[4] = { sumVal, 2, 'B', false };
-    print(arr);
+function banner() {
+    char c = '=';
+    for (int i = 0; i < 10; i = i + 1) {
+        print(c);
+    }
+}
 
-    for (int i = 0; i < 4; i = i + 1) {
-        if (i == 2) break;
-        sumVal = sumVal + arr[i];
+function main() int {
+    banner();                     
+    int k = 7;
+    int fk = fib(k);               
+    
+    box data[4] = { fk, k, 'X', true };
+    print(data);
+
+    choose (fk) {
+        case 8:  fk = fk + 80;
+        case 13: fk = fk + 130;    
+        default: fk = fk + 1;
     }
 
-    int j = 0;
-    while (!(j == sumVal) && j < 10) {
-        j = j + 1;
-    }
-
-    box bools[3] = { true, false, true };
-    bool b1 = flag || (sumVal > 10);
-    bool b2 = b1 && bools[0];
-
-    choose (sumVal) {
-        case 1:  sumVal = sumVal + 100;
-        case 2:  sumVal = sumVal + 10;
-        default: sumVal = sumVal;
+    int counter = 0;
+    while (counter < 3) {
+        print(counter);
+        counter = counter + 1;
     }
 
     {
-	print(sumVal);
-        int sumVal = 42;
-        print(sumVal);
-        bool inside = true;
-        if (inside) sumVal = sumVal + 1;
+        int fk = 42;
+        print(fk);                 
     }
 
-    print(sumVal);
-    return sumVal;
+    print(fk);                     
+    banner();                      
+
+    return fk;                     
 }
