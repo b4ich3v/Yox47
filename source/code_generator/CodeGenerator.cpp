@@ -1,6 +1,6 @@
 #include "CodeGenerator.h"
 
-static const char* typeTag(NodeType type)
+const char* CodeGenerator::typeTag(NodeType type)
 {
 
     switch (type)
@@ -203,14 +203,14 @@ void CodeGenerator::generateExpression(Expression* expression)
 
             generateLine("cmp rax, rcx");
 
-            const char* setInstr =
+            const char* setInstruction =
                 (binaryExpression->oper == TokenType::EQUAL_EQUAL) ? "sete" :
                 (binaryExpression->oper == TokenType::NOT_EQUAL) ? "setne" :
                 (binaryExpression->oper == TokenType::LESS) ? "setl" :
                 (binaryExpression->oper == TokenType::LESS_EQUAL) ? "setle" :
                 (binaryExpression->oper == TokenType::GREATER) ? "setg" :
                 "setge";            
-            generateLine(std::string(setInstr) + " al");
+            generateLine(std::string(setInstruction) + " al");
             generateLine("movzx rax, al");
 
             break;
@@ -337,8 +337,6 @@ void CodeGenerator::generateFunction(FunctionDeclaration* fn)
     generateLine("");
 
 }
-
-std::stack<std::string> breakLabels;
 
 void CodeGenerator::generateStatement(Statement* statement)
 {
@@ -565,3 +563,4 @@ void CodeGenerator::generateStatement(Statement* statement)
     }
 
 }
+
