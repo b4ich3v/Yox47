@@ -1,6 +1,6 @@
-#include "ast_nodes/node/Node.h"
-#include "ast_nodes/expressions/Expressions.h"
+#include "Node.h"
 #include <vector>
+#include "Expressions.h"
 #pragma once
 
 struct Statement : Node { using Node::Node; };
