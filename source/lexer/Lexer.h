@@ -148,5 +148,6 @@ public:
 
     void tokenize();
 
-};
+    static const char* tokenName(TokenType type);
 
+};
