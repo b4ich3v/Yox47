@@ -14,10 +14,11 @@ private:
 
     Program* root;
     std::ofstream file;
-    std::unordered_map<std::string, int> localOffsets;
-    std::unordered_map<std::string, std::string> floatPool;
     int currentStackOffset;
 
+    std::unordered_map<std::string, int> localOffsets;
+    std::unordered_map<std::string, std::string> floatPool;
+    
     void generateLine(const std::string& text);
 
     void generateProgram(Program* program);
