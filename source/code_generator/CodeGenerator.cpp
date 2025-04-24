@@ -1,5 +1,21 @@
 #include "CodeGenerator.h"
 
+static const char* typeTag(NodeType type)
+{
+
+    switch (type)
+    {
+
+    case NodeType::INT_LITERAL: return "0"; 
+    case NodeType::FLOAT_LITERAL: return "1"; 
+    case NodeType::BOOL_LITERAL: return "2"; 
+    case NodeType::BOX_LITERAL: return "3"; 
+    default: return "0";
+
+    }
+
+}
+
 CodeGenerator::CodeGenerator(Program* root, const std::string& file):
     root(root), file(file), currentStackOffset(0) {}
 
@@ -12,17 +28,32 @@ void CodeGenerator::generateLine(const std::string& text)
 
 void CodeGenerator::generate()
 {
-
+    
     generateLine("section .text");
     generateLine("global _start");
     generateLine("extern exit");
+    generateLine("extern malloc");
+    generateLine("extern printf");
+    generateLine("extern fflush");
     generateLine("");
+
     generateProgram(root);
 
     generateLine("_start:");
     generateLine("call main");
     generateLine("mov rdi, 0");
     generateLine("call exit");
+
+    if (!floatPool.empty())
+    {
+
+        generateLine("");
+        generateLine("section .rodata");
+
+        for (auto& kv : floatPool)               
+            generateLine(kv.first + ": dq " + kv.second);
+
+    }
 
 }
 
@@ -34,21 +65,272 @@ void CodeGenerator::generateProgram(Program* program)
 
 }
 
-void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration)
+void CodeGenerator::generateExpression(Expression* expression)
+{
+
+    switch (expression->type)
+    {
+        
+    case NodeType::INT_LITERAL: 
+    {
+
+        auto* intLiteral = (IntegerLitExpression*)expression;
+        generateLine("mov rax, " + intLiteral->text);
+
+        break;
+
+    }
+    case NodeType::FLOAT_LITERAL:
+    {
+
+        auto* floatLiteral = (FloatLitExpression*)expression;
+        std::string lbl = ".LC_float_" + floatLiteral->text;
+        floatPool.emplace(lbl, floatLiteral->text);
+        generateLine("movsd xmm0, [rel " + lbl + "]");
+        generateLine("movq rax, xmm0"); 
+        
+        break;
+
+    }
+    case NodeType::BOOL_LITERAL: 
+    {
+
+        auto* boolLiteral = (BoolLitExpression*)expression;
+        generateLine("mov rax, " + std::to_string(boolLiteral->value));
+
+        break;
+
+    }
+    case NodeType::CHAR_LITERAL: 
+    {
+
+        auto* charLiteral = (CharLitExpression*)expression; 
+        char variable = (charLiteral->text.size() >= 3) ? charLiteral->text[1] : 0; 
+        generateLine("mov rax," + std::to_string((int)variable)); 
+
+        break;
+
+    }  
+    case NodeType::BOX_LITERAL:
+    {
+
+        auto* boxLiteral = (BoxLiteral*)expression;
+        int size = (int)boxLiteral->elements.size();
+
+        generateLine("; allocate space for box with " + std::to_string(size) + " elements");
+        generateLine("mov rdi, " + std::to_string(8 + size * 16));
+        generateLine("call malloc");
+        generateLine("mov rbx, rax");
+        generateLine("mov [rbx], " + std::to_string(size));
+        generateLine("add rbx, 8");
+
+        for (auto& currentElement : boxLiteral->elements)
+        {
+
+            generateLine("mov qword [rbx], " + std::string(typeTag(currentElement->type)));
+            generateLine("add rbx, 8");
+            generateExpression(currentElement.get());
+            generateLine("mov [rbx], rax");
+            generateLine("add rbx, 8");
+
+        }
+
+        generateLine("sub rbx, " + std::to_string(size * 16));
+        generateLine("sub rbx, 8");
+        generateLine("mov rax, rbx");
+
+        break;
+
+    }
+    case NodeType::IDENTIFIER: 
+    {
+
+        auto* id = (IdentifierExpression*)expression;
+        int off = localOffsets[id->name];
+        generateLine("mov rax, [rbp-" + std::to_string(off) + "] ; " + id->name);
+
+        break;
+
+    }
+    case NodeType::UNARY_EXPRESSION: 
+    {
+
+        auto* unaryExpression = (UnaryExpression*)expression;
+        generateExpression(unaryExpression->operand.get());
+
+        if (unaryExpression->oper == TokenType::NEGATION) 
+        {        
+
+            generateLine("cmp rax, 0");
+            generateLine("sete al");
+            generateLine("movzx rax, al");
+
+        }
+        else if (unaryExpression->oper == TokenType::MINUS) 
+        {           
+
+            generateLine("neg rax");
+
+        }
+
+        break;
+
+    }                            
+    case NodeType::BINARY_EXPRESSION: 
+    {
+
+        auto* binaryExpression = (BinaryExpression*)expression;
+
+        generateExpression(binaryExpression->right.get());
+        generateLine("push rax");
+        generateExpression(binaryExpression->left.get());
+        generateLine("pop rcx");
+
+        switch (binaryExpression->oper)
+        {
+
+        case TokenType::PLUS: generateLine("add rax, rcx"); break;
+        case TokenType::MINUS: generateLine("sub rax, rcx"); break;
+        case TokenType::STAR: generateLine("imul rax, rcx"); break;
+        case TokenType::SLASH: generateLine("cqo"); generateLine("idiv rcx"); break;
+        case TokenType::EQUAL_EQUAL:
+        case TokenType::NOT_EQUAL:
+        case TokenType::LESS:
+        case TokenType::LESS_EQUAL:
+        case TokenType::GREATER:
+        case TokenType::GREATER_EQUAL: 
+        {
+
+            generateLine("cmp rax, rcx");
+
+            const char* setInstr =
+                (binaryExpression->oper == TokenType::EQUAL_EQUAL) ? "sete" :
+                (binaryExpression->oper == TokenType::NOT_EQUAL) ? "setne" :
+                (binaryExpression->oper == TokenType::LESS) ? "setl" :
+                (binaryExpression->oper == TokenType::LESS_EQUAL) ? "setle" :
+                (binaryExpression->oper == TokenType::GREATER) ? "setg" :
+                "setge";            
+            generateLine(std::string(setInstr) + " al");
+            generateLine("movzx rax, al");
+
+            break;
+
+        }
+        case TokenType::LOGICAL_AND: 
+        {
+
+            generateLine("and rax, rcx");
+            generateLine("cmp rax, 0");
+            generateLine("setne al");
+            generateLine("movzx rax, al");
+
+            break;
+
+        } 
+        case TokenType::LOGICAL_OR:
+        {
+
+            generateLine("or rax, rcx");
+            generateLine("cmp rax, 0");
+            generateLine("setne al");
+            generateLine("movzx rax, al");
+
+            break;
+
+        }
+        default: break;
+
+        }
+
+        break;
+
+    }
+    case NodeType::CALL_EXPRESSION: 
+    {
+
+        auto* callExpression = (CallExpression*)expression;
+
+        for (auto iter = callExpression->arguments.rbegin(); iter != callExpression->arguments.rend(); iter++)
+        {
+
+            generateExpression(iter->get());
+            generateLine("push rax");
+
+        }
+
+        if (callExpression->arguments.size() & 1)
+        {
+
+            generateLine("sub rsp, 8");
+            generateLine("call " + callExpression->callee);
+            generateLine("add rsp, " + std::to_string(callExpression->arguments.size() * 8 + 8));
+
+        }
+        else 
+        {
+
+            generateLine("call " + callExpression->callee);
+            generateLine("add rsp, " + std::to_string(callExpression->arguments.size() * 8));
+
+        }
+
+        break;
+
+    }
+    case NodeType::INDEX_EXPRESSION: 
+    {
+
+        auto* indexExpression = (IndexExpression*)expression;
+
+        generateExpression(indexExpression->base.get());      
+        generateLine("push rax");
+        generateExpression(indexExpression->index.get());     
+        generateLine("pop rbx");
+        generateLine("imul rax, 16");
+        generateLine("add rbx, 8");
+        generateLine("add rbx, rax");
+        generateLine("add rbx, 8");
+        generateLine("mov rax, [rbx]");
+
+        break;
+
+    }
+    default: generateLine("TODO!!!");
+        
+    }
+
+}
+
+void CodeGenerator::generateFunction(FunctionDeclaration* fn)
 {
 
     localOffsets.clear();
     currentStackOffset = 0;
 
-    generateLine(functionDeclaration->name + ":");
+    generateLine(fn->name + ":");
     generateLine("push rbp");
     generateLine("mov rbp, rsp");
+    generateLine("push rbx");               
 
-    for (auto& currentParam : functionDeclaration->parameters)
-        generateLine("; TODO!!!");
+    int argOffset = 16;   
 
-    generateStatement(functionDeclaration->body.get());
+    for (auto& currentParam : fn->parameters)
+    {
 
+        currentStackOffset += 8;
+        localOffsets[currentParam.name] = currentStackOffset;
+        generateLine("sub rsp, 8");
+        generateLine("mov rax, [rbp+" + std::to_string(argOffset) + "]");
+        generateLine("mov [rbp-" + std::to_string(currentStackOffset) +
+            "], rax ; param " + currentParam.name);
+        argOffset += 8;
+
+    }
+
+    generateStatement(fn->body.get());
+
+    generateLine(".return:");
+    generateLine("pop rbx");
     generateLine("mov rsp, rbp");
     generateLine("pop rbp");
     generateLine("ret");
@@ -69,14 +351,21 @@ void CodeGenerator::generateStatement(Statement* statement)
 
         auto variableDeclaration = (VariableDeclaration*)(statement);
 
+        currentStackOffset += 8;
+        localOffsets[variableDeclaration->name] = currentStackOffset;
+        generateLine("sub rsp, 8");
+        
         if (variableDeclaration->init)
         {
 
             generateExpression(variableDeclaration->init.get());
-            currentStackOffset += 8;
-            localOffsets[variableDeclaration->name] = currentStackOffset;
-            generateLine("sub rsp, 8");
-            generateLine("mov [rbp - " + std::to_string(currentStackOffset) + "], rax ; variable " + variableDeclaration->name);
+            generateLine("mov [rbp - " + std::to_string(currentStackOffset) + "], rax ; init " + variableDeclaration->name);
+
+        }
+        else
+        {
+
+           generateLine("mov qword [rbp - " + std::to_string(currentStackOffset) + "], 0 ; default-init");
 
         }
 
@@ -276,178 +565,3 @@ void CodeGenerator::generateStatement(Statement* statement)
     }
 
 }
-
-void CodeGenerator::generateExpression(Expression* expression)
-{
-
-    switch (expression->type)
-    {
-
-    case NodeType::INT_LITERAL:
-    {
-
-        auto intLiteral = (IntegerLitExpression*)(expression);
-        generateLine("mov rax, " + intLiteral->text);
-
-        break;
-
-    }
-    case NodeType::FLOAT_LITERAL:
-    {
-
-        auto floatLiteral = (FloatLitExpression*)(expression);
-        generateLine("movsd xmm0, [rel .LC_float_" + floatLiteral->text + "]");
-
-        break;
-    }
-    case NodeType::BOOL_LITERAL:
-    {
-
-        auto boolLiteral = (BoolLitExpression*)(expression);
-        generateLine("mov rax, " + std::to_string(boolLiteral->value));
-
-        break;
-
-    }
-    case NodeType::CHAR_LITERAL:
-    {
-
-        auto charLiteral = (CharLitExpression*)(expression);
-
-        if (!charLiteral->text.empty() && charLiteral->text.length() >= 3)
-        {
-
-            char value = charLiteral->text[1];
-            generateLine("mov rax, " + std::to_string(static_cast<int>(value)));
-
-        }
-        else 
-        {
-
-            generateLine("mov rax, 0");
-
-        }
-
-        break;
-
-    }
-    case NodeType::IDENTIFIER:
-    {
-
-        auto id = (IdentifierExpression*)(expression);
-        int offset = localOffsets[id->name];
-        generateLine("mov rax, [rbp - " + std::to_string(offset) + "] ; load " + id->name);
-
-        break;
-
-    }
-    case NodeType::BINARY_EXPRESSION:
-    {
-
-        auto binaryExpression = (BinaryExpression*)(expression);
-        generateExpression(binaryExpression->right.get());
-        generateLine("push rax");
-        generateExpression(binaryExpression->left.get());
-        generateLine("pop rcx");
-
-        switch (binaryExpression->oper)
-        {
-
-        case TokenType::PLUS: generateLine("add rax, rcx"); break;
-        case TokenType::MINUS: generateLine("sub rax, rcx"); break;
-        case TokenType::STAR: generateLine("imul rax, rcx"); break;
-        case TokenType::SLASH: generateLine("cqo"); generateLine("idiv rcx"); break;
-        default: break;
-
-        }
-
-        break;
-
-    }
-    case NodeType::UNARY_EXPRESSION:
-    {
-
-        auto unaryExpression = (UnaryExpression*)(expression);
-        generateExpression(unaryExpression->operand.get());
-
-        if (unaryExpression->oper == TokenType::NEGATION)
-            generateLine("not rax");
-
-        break;
-
-    }
-    case NodeType::CALL_EXPRESSION:
-    {
-
-        auto callExpression = (CallExpression*)(expression);
-
-        for (auto currentArgument = callExpression->arguments.rbegin(); 
-            currentArgument != callExpression->arguments.rend(); currentArgument++)
-        {
-
-            generateExpression(currentArgument->get());
-            generateLine("push rax");
-
-        }
-
-        generateLine("call " + callExpression->callee);
-        generateLine("add rsp, " + std::to_string(callExpression->arguments.size() * 8));
-
-        break;
-
-    }
-    case NodeType::INDEX_EXPRESSION:
-    {
-
-        auto indexExpression = (IndexExpression*)(expression);
-
-        generateExpression(indexExpression->base.get());
-        generateLine("push rax");
-        generateExpression(indexExpression->index.get());
-        generateLine("pop rbx");
-        generateLine("imul rax, 16");
-        generateLine("add rbx, 8");
-        generateLine("add rbx, rax");
-        generateLine("add rbx, 8");
-        generateLine("mov rax, [rbx]");
-
-        break;
-
-    }
-    case NodeType::BOX_LITERAL:
-    {
-
-        auto boxLiteral = (BoxLiteral*)(expression);
-        int elementCount = (int)(boxLiteral->elements.size());
-
-        generateLine("; allocate space for box with " + std::to_string(elementCount) + " elements");
-        generateLine("mov rdi, " + std::to_string(8 + elementCount * (8 + 8)));
-        generateLine("call malloc");
-        generateLine("mov rbx, rax ; rbx = start of box");
-        generateLine("mov [rbx], " + std::to_string(elementCount));
-        generateLine("add rbx, 8");
-
-        for (int i = 0; i < boxLiteral->elements.size(); i++)
-        {
-
-            generateLine("mov qword [rbx], 0 ; TYPE_INT for now");
-            generateLine("add rbx, 8");
-            generateExpression(boxLiteral->elements[i].get());
-            generateLine("mov [rbx], rax");
-            generateLine("add rbx, 8");
-
-        }
-
-        generateLine("sub rbx, " + std::to_string(elementCount * (8 + 8)));
-        generateLine("sub rbx, 8");
-        generateLine("mov rax, rbx ; return address of box");
-
-        break;
-
-    }
-    default: generateLine("; TODO!!!"); break;
-        
-    } 
-
-}
-
