@@ -43,4 +43,3 @@ public:
     virtual ~Node() = default;
 
 };
-
