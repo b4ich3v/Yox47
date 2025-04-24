@@ -85,24 +85,24 @@ std::unique_ptr<Program> Parser::parseProgram()
 
 std::unique_ptr<FunctionDeclaration> Parser::parseFunction()
 {
-
+	
 	expectManagement(TokenType::KEY_WORD_FUNCTION, "expected 'function'");
 
 	if (!checkToken(TokenType::IDENTIFIER))
 		throw std::runtime_error("expected function name");
 
-	std::string functionName(currentToken.startPtr, currentToken.length);
-	process();
+	std::string name(currentToken.startPtr, currentToken.length);
+	process();                                    
 
 	expectManagement(TokenType::LPAREN, "expected '('");
 	std::vector<Parameter> params;
 
-	if (!checkToken(TokenType::RPAREN))
+	if (!checkToken(TokenType::RPAREN))           
 	{
 
-		do
+		do 
 		{
-
+			
 			if (!checkToken(TokenType::IDENTIFIER))
 				throw std::runtime_error("expected parameter name");
 
@@ -119,12 +119,16 @@ std::unique_ptr<FunctionDeclaration> Parser::parseFunction()
 	}
 
 	expectManagement(TokenType::RPAREN, "expected ')'");
+
+	VariableType returnType =
+		checkToken(TokenType::LBRACE) ? VariableType::Void : parseType();
+
 	auto body = parseBlock();
 
-	auto functionNameResult = std::make_unique<FunctionDeclaration>(functionName, std::move(body));
-	functionNameResult->parameters = std::move(params);
-
-	return functionNameResult;
+	auto functionDeclaration = std::make_unique<FunctionDeclaration>(name, 
+		returnType, std::move(body));
+	functionDeclaration->parameters = std::move(params);
+	return functionDeclaration;
 
 }
 
@@ -260,21 +264,8 @@ std::unique_ptr<Expression> Parser::parsePrimary()
 		std::string name(currentToken.startPtr, currentToken.length);
 		process();
 
-		std::unique_ptr<Expression> expression =
-			std::make_unique<IdentifierExpression>(name);
-
-		while (matcher(TokenType::LBRACKET))
-		{
-
-			auto index = parseExpression();
-
-			expectManagement(TokenType::RBRACKET, "expected ']'");
-			expression = std::make_unique<IndexExpression>(std::move(expression),
-				std::move(index));
-
-		}
-
-		return expression;
+		auto expression = std::make_unique<IdentifierExpression>(name);
+		return finishPostfix(std::move(expression));
 
 	}
 
@@ -288,7 +279,6 @@ std::unique_ptr<Expression> Parser::parsePrimary()
 			std::move(operand));
 
 	}
-
 
 	if (checkToken(TokenType::INT))
 	{
@@ -327,6 +317,16 @@ std::unique_ptr<Expression> Parser::parsePrimary()
 		process();
 
 		return std::make_unique<CharLitExpression>(text);
+
+	}
+
+	if (checkToken(TokenType::MINUS))
+	{
+
+		process();
+		auto operand = parsePrimary();
+
+		return std::make_unique<UnaryExpression>(TokenType::MINUS,std::move(operand));
 
 	}
 
@@ -524,6 +524,50 @@ std::unique_ptr<Statement> Parser::parseChoose()
 	expectManagement(TokenType::RBRACE, "expected '}'");
 	return std::make_unique<ChooseStatement>(std::move(parsedExpression), 
 		std::move(cases), std::move(parsedDefaultStatement));
+
+}
+
+std::unique_ptr<Expression> Parser::finishPostfix(std::unique_ptr<Expression> expression)
+{
+
+	while (true)
+	{
+
+		if (matcher(TokenType::LPAREN))         
+		{
+
+			std::vector<std::unique_ptr<Expression>> arguments;
+
+			if (!checkToken(TokenType::RPAREN))
+			{
+
+				do { arguments.push_back(parseExpression()); } while (matcher(TokenType::COMMA));
+
+			}
+
+			expectManagement(TokenType::RPAREN, "expected ')'");
+			expression = std::make_unique<CallExpression>(
+				dynamic_cast<IdentifierExpression*>(expression.get())->name,
+				std::move(arguments));
+			continue;
+
+		}
+		if (matcher(TokenType::LBRACKET))      
+		{
+
+			auto index = parseExpression();
+
+			expectManagement(TokenType::RBRACKET, "expected ']'");
+			expression = std::make_unique<IndexExpression>(std::move(expression),std::move(index));
+			continue;
+
+		}
+
+		break;
+
+	}
+
+	return expression;
 
 }
 
