@@ -1,8 +1,8 @@
-#include "lexer/Lexer.h"
-#include "ast_nodes/declarations_and_program/DeclarationsAndProgram.h"
-#include "ast_nodes/statements/Statements.h"
-#include "ast_nodes/expressions/Expressions.h"
-#include "ast_nodes/call_expression_and_variables/CallExpressionAndVariables.h"
+#include "Lexer.h"
+#include "DeclarationsAndProgram.h"
+#include "Statements.h"
+#include "Expressions.h"
+#include "CallExpressionAndVariables.h"
 #pragma once
 
 class Parser
@@ -48,6 +48,8 @@ private:
 
     std::unique_ptr<Statement> parseFor();
 
+    std::unique_ptr<Expression> finishPostfix(std::unique_ptr<Expression> expression);
+
 public:
 
     explicit Parser(Lexer& lexer);
@@ -55,4 +57,3 @@ public:
     std::unique_ptr<Program> parseProgram();
 
 };
-
