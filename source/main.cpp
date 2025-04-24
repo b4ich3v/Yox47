@@ -2,10 +2,10 @@
 #include <sstream>
 #include <iostream>
 #include <memory>
-#include "lexer/Lexer.h"
-#include "parser/Parser.h"
-#include "semantic/Semantic.h"
-#include "code_generator/CodeGenerator.h"
+#include "Lexer.h"
+#include "Parser.h"
+#include "Semantic.h"
+#include "CodeGenerator.h"
 
 int main()
 {
