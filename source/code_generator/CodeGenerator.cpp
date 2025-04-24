@@ -121,8 +121,8 @@ void CodeGenerator::generateExpression(Expression* expression)
         generateLine("mov rdi, " + std::to_string(8 + size * 16));
         generateLine("call malloc");
         generateLine("mov rbx, rax");
-        generateLine("mov [rbx], " + std::to_string(size));
-        generateLine("add rbx, 8");
+        generateLine("mov qword [rbx], " + std::to_string(size));
+        generateLine("add rbx, 8"); 
 
         for (auto& currentElement : boxLiteral->elements)
         {
@@ -331,7 +331,7 @@ void CodeGenerator::generateFunction(FunctionDeclaration* fn)
 
     generateLine(".return:");
     generateLine("pop rbx");
-    generateLine("mov rsp, rbp");
+    generateLine("mov rsp, rbp"); 
     generateLine("pop rbp");
     generateLine("ret");
     generateLine("");
@@ -363,7 +363,7 @@ void CodeGenerator::generateStatement(Statement* statement)
         else
         {
 
-           generateLine("mov qword [rbp - " + std::to_string(currentStackOffset) + "], 0 ; default-init");
+           generateLine("mov qword [rbp - " + std::to_string(currentStackOffset) + "], 0 ; default-init"); 
 
         }
 
