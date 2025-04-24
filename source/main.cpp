@@ -13,32 +13,51 @@ int main()
     std::ifstream file("test.txt");
     std::ostringstream buffer;
     buffer << file.rdbuf();
-    std::string source = buffer.str();         
+    std::string source = buffer.str();
 
-    try 
     {
 
-        Lexer lexer(source.c_str(), source.size());
+        Lexer debug(source.c_str(), source.size());
+
+        std::cout << "-----------------------------------" << std::endl;
+
+        while (true)
+        {
+
+            Token currentToken = debug.nextToken();
+            std::cout << Lexer::tokenName(currentToken.type) << "  " << 
+                std::string(currentToken.startPtr, currentToken.length) << std::endl;
+
+            if (currentToken.type == TokenType::END_OF_FILE) break;
+
+        }
+
+        std::cout << "-----------------------------------" << std::endl;
+
+    }
+
+    try
+    {
+
+        Lexer lexer(source.c_str(), source.size());   
         Parser parser(lexer);
-        std::unique_ptr<Program> ast = parser.parseProgram();
+        auto ast = parser.parseProgram();
 
-        SemanticChecker checker;
-        checker.check(ast.get());
-
-        CodeGenerator generator(ast.get(), "out.asm");
-        generator.generate();
+        SemanticChecker().check(ast.get());
+        CodeGenerator(ast.get(), "out.asm").generate();
 
         std::cout << "OK!" << std::endl;
 
     }
-    catch (const std::exception& e) 
+    catch (const std::exception& e)
     {
 
         std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
+        return -1;
 
     }
 
     return 0;
 
 }
+
