@@ -8,3 +8,7 @@ VariableDeclaration::VariableDeclaration(const std::string& name, VariableType t
 CallExpression::CallExpression(const std::string& callee,
     std::vector<std::unique_ptr<Expression>> arguments):
     Expression(NodeType::CALL_EXPRESSION), callee(callee), arguments(std::move(arguments)) {}
+
+CastExpression::CastExpression(VariableType target, std::unique_ptr<Expression> value)
+    : Expression(NodeType::UNARY_EXPRESSION),   
+    targetType(target), value(std::move(value)) {}
