@@ -16,8 +16,85 @@ const char* CodeGenerator::typeTag(NodeType type)
 
 }
 
-CodeGenerator::CodeGenerator(Program* root, const std::string& file):
-    root(root), file(file), currentStackOffset(0) {}
+std::string CodeGenerator::sanitize(const std::string& str)
+{
+
+    std::string result = str;
+    for (char& currentSymbol : result) if (currentSymbol == '.') currentSymbol = '_';   
+
+    return result;
+
+}
+
+std::string CodeGenerator::floatLabel(const std::string& text)
+{
+
+    return "LC_float_" + sanitize(text);   
+
+}
+
+CodeGenerator::CodeGenerator(Program* root, const std::string& fileName): 
+    root(root), file(fileName) {}
+
+bool CodeGenerator::isFloatExpression(Expression* expression)
+{
+
+    switch (expression->type)
+    {
+    case NodeType::FLOAT_LITERAL: return true;
+    case NodeType::INT_LITERAL:
+    case NodeType::CHAR_LITERAL:
+    case NodeType::BOOL_LITERAL: return false;
+    case NodeType::IDENTIFIER: 
+    {      
+
+        auto id = (IdentifierExpression*)(expression);
+        auto iter = varTypes.find(id->name);
+
+        return iter != varTypes.end() && iter->second == VariableType::Float;
+
+    }
+    case NodeType::UNARY_EXPRESSION: 
+    {
+
+        if (auto castExpression = dynamic_cast<CastExpression*>(expression))
+            return castExpression->targetType == VariableType::Float;
+
+        auto unaryExpression = (UnaryExpression*)(expression);
+        return isFloatExpression(unaryExpression->operand.get());
+
+    }
+    case NodeType::ASSIGNMENT_EXPRESSION:
+    {
+
+        auto assignmentExpression = (AssignmentExpression*)(expression);
+        return isFloatExpression(assignmentExpression->value.get());
+
+    }
+    case NodeType::BINARY_EXPRESSION: 
+    {
+
+        auto binaryExpression = (BinaryExpression*)(expression);
+
+        return isFloatExpression(binaryExpression->left.get()) ||
+            isFloatExpression(binaryExpression->right.get());
+
+    }
+    case NodeType::CALL_EXPRESSION: 
+    {
+
+        auto callExpression = (CallExpression*)(expression);
+        auto iter = fnReturnTypes.find(callExpression->callee);
+
+        return iter != fnReturnTypes.end() && iter->second == VariableType::Float;
+
+    }
+    case NodeType::INDEX_EXPRESSION: return false; // we cannot knowe for compile-time
+    default: return false;
+
+    }
+
+}
 
 void CodeGenerator::generateLine(const std::string& text)
 {
@@ -29,31 +106,48 @@ void CodeGenerator::generateLine(const std::string& text)
 void CodeGenerator::generate()
 {
     
+    generateLine("default rel");              
     generateLine("section .text");
     generateLine("global _start");
+
     generateLine("extern exit");
+    generateLine("extern print_int");
+    generateLine("extern print_bool");
+    generateLine("extern print_char");
+    generateLine("extern print_float");
+    generateLine("extern print_box");
     generateLine("extern malloc");
     generateLine("extern printf");
     generateLine("extern fflush");
     generateLine("");
 
     generateProgram(root);
-
+              
     generateLine("_start:");
     generateLine("call main");
-    generateLine("mov rdi, 0");
+    generateLine("xor  ecx, ecx");
     generateLine("call exit");
 
     if (!floatPool.empty())
     {
 
         generateLine("");
-        generateLine("section .rodata");
+        generateLine("section .rdata align=8");
 
-        for (auto& kv : floatPool)               
+        for (auto& kv : floatPool)
             generateLine(kv.first + ": dq " + kv.second);
 
     }
+    else
+    {
+        
+        generateLine("");
+        generateLine("section .rodata");
+
+    }
+
+    generateLine(".LC_fmt_int   db \"%lld\", 10, 0");
+    generateLine(".LC_fmt_float db \"%f\",   10, 0");
 
 }
 
@@ -84,9 +178,9 @@ void CodeGenerator::generateExpression(Expression* expression)
     {
 
         auto* floatLiteral = (FloatLitExpression*)expression;
-        std::string lbl = ".LC_float_" + floatLiteral->text;
-        floatPool.emplace(lbl, floatLiteral->text);
-        generateLine("movsd xmm0, [rel " + lbl + "]");
+        std::string label = floatLabel(floatLiteral->text);
+        floatPool.emplace(label, floatLiteral->text);
+        generateLine("movsd xmm0, [rel " + label + "]");
         generateLine("movq rax, xmm0"); 
         
         break;
@@ -155,6 +249,50 @@ void CodeGenerator::generateExpression(Expression* expression)
     case NodeType::UNARY_EXPRESSION: 
     {
 
+        if (auto* castExpression = dynamic_cast<CastExpression*>(expression))
+        {
+
+            generateExpression(castExpression->value.get());      
+
+            switch (castExpression->targetType)
+            {
+
+            case VariableType::Float: generateLine("cvtsi2sd xmm0, rax"); generateLine("movq rax, xmm0"); break;
+            case VariableType::Int: generateLine("movzx rax, al"); break;
+            case VariableType::Bool: 
+            {
+               
+                NodeType source = castExpression->value->type;
+
+                if (source == NodeType::INT_LITERAL || source == NodeType::IDENTIFIER)
+                {   
+
+                    generateLine("cmp rax, 0");
+                    generateLine("setne al");
+                    generateLine("movzx rax, al");
+
+                }
+                else
+                {   
+
+                    generateLine("sub rsp, 8");       
+                    generateLine("push rax");         
+                    generateLine("call float_to_bool");
+                    generateLine("add rsp, 8");       
+                    generateLine("mov rax, [rsp]");   
+
+                }
+
+                break;
+            }
+            default: generateLine("; TODO!!!"); break;
+
+            }
+
+            break;
+
+        }
+
         auto* unaryExpression = (UnaryExpression*)expression;
         generateExpression(unaryExpression->operand.get());
 
@@ -180,6 +318,34 @@ void CodeGenerator::generateExpression(Expression* expression)
     {
 
         auto* binaryExpression = (BinaryExpression*)expression;
+        bool isFloat = isFloatExpression(binaryExpression);
+
+        if (isFloat)
+        {
+            
+            generateExpression(binaryExpression->right.get());    
+            generateLine("sub rsp, 8");
+            generateLine("movq [rsp], xmm0");
+
+            generateExpression(binaryExpression->left.get());    
+            generateLine("movq xmm1, [rsp]");
+            generateLine("add rsp, 8");
+
+            switch (binaryExpression->oper)
+            {
+
+            case TokenType::PLUS:  generateLine("addsd xmm0, xmm1"); break;
+            case TokenType::MINUS: generateLine("subsd xmm0, xmm1"); break;
+            case TokenType::STAR:  generateLine("mulsd xmm0, xmm1"); break;
+            case TokenType::SLASH: generateLine("divsd xmm0, xmm1"); break;
+            default: generateLine("; TODO!!!"); break;
+
+            }
+
+            generateLine("movq rax, xmm0");        
+            break;
+
+        }
 
         generateExpression(binaryExpression->right.get());
         generateLine("push rax");
@@ -295,30 +461,68 @@ void CodeGenerator::generateExpression(Expression* expression)
         break;
 
     }
+    case NodeType::ASSIGNMENT_EXPRESSION:
+    {
+
+        auto* assignmentExpression = (AssignmentExpression*)expression;
+
+        generateExpression(assignmentExpression->value.get());
+
+        if (assignmentExpression->target->type == NodeType::IDENTIFIER)
+        {
+
+            auto* id = (IdentifierExpression*)assignmentExpression->target.get();
+            int currentOffset = localOffsets[id->name];
+            generateLine("mov [rbp-" + std::to_string(currentOffset) + "], rax ; assign " + id->name);
+
+        }
+        else
+        {
+            
+            auto* indexExpression = (IndexExpression*)assignmentExpression->target.get();
+            
+            generateExpression(indexExpression->base.get());        
+            generateLine("push rax");
+            generateExpression(indexExpression->index.get());       
+            generateLine("pop rbx");
+            generateLine("imul rax, 16");
+            generateLine("add rbx, 8");
+            generateLine("add rbx, rax");
+            generateLine("add rbx, 8");
+            generateLine("mov [rbx], rax");
+        }
+
+        break;
+
+    }
     default: generateLine("TODO!!!");
         
     }
 
 }
 
-void CodeGenerator::generateFunction(FunctionDeclaration* fn)
+void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration)
 {
+
+    fnReturnTypes[functionDeclaration->name] = functionDeclaration->returnType;
 
     localOffsets.clear();
     currentStackOffset = 0;
 
-    generateLine(fn->name + ":");
+    generateLine(functionDeclaration->name + ":");
     generateLine("push rbp");
     generateLine("mov rbp, rsp");
     generateLine("push rbx");               
 
     int argOffset = 16;   
 
-    for (auto& currentParam : fn->parameters)
+    for (auto& currentParam : functionDeclaration->parameters)
     {
 
         currentStackOffset += 8;
         localOffsets[currentParam.name] = currentStackOffset;
+        varTypes[currentParam.name] = currentParam.type;
+
         generateLine("sub rsp, 8");
         generateLine("mov rax, [rbp+" + std::to_string(argOffset) + "]");
         generateLine("mov [rbp-" + std::to_string(currentStackOffset) +
@@ -327,7 +531,7 @@ void CodeGenerator::generateFunction(FunctionDeclaration* fn)
 
     }
 
-    generateStatement(fn->body.get());
+    generateStatement(functionDeclaration->body.get());
 
     generateLine(".return:");
     generateLine("pop rbx");
@@ -348,6 +552,7 @@ void CodeGenerator::generateStatement(Statement* statement)
     {
 
         auto variableDeclaration = (VariableDeclaration*)(statement);
+        varTypes[variableDeclaration->name] = variableDeclaration->type;
 
         currentStackOffset += 8;
         localOffsets[variableDeclaration->name] = currentStackOffset;
