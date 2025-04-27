@@ -14,6 +14,14 @@ bool Parser::checkToken(TokenType type) const
 
 }
 
+bool Parser::isLValue(Expression* expression) const
+{
+
+	return expression->type == NodeType::IDENTIFIER ||
+		expression->type == NodeType::INDEX_EXPRESSION;
+
+}
+
 bool Parser::matcher(TokenType type)
 {
 
@@ -226,11 +234,25 @@ std::unique_ptr<Expression> Parser::parseExpression(int minPrecedence)
 		process();
 
 		int nextMin = (oper == TokenType::ASSIGN) ? precedence : precedence + 1;
-
 		auto right = parseExpression(nextMin);
 
-		left = std::make_unique<BinaryExpression>(oper,
-			std::move(left), std::move(right));
+		if (oper == TokenType::ASSIGN)
+		{
+
+			if (!isLValue(left.get()))
+				 throw std::runtime_error("left side of '=' is not assignable");
+			
+			left = std::make_unique<AssignmentExpression>(std::move(left),
+				std::move(right));
+
+		}
+		else
+		{
+
+			left = std::make_unique<BinaryExpression>(oper,
+				std::move(left), std::move(right));
+
+		}
 
 	}
 
