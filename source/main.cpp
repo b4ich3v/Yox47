@@ -42,11 +42,15 @@ int main()
         Lexer lexer(source.c_str(), source.size());   
         Parser parser(lexer);
         auto ast = parser.parseProgram();
+        std::cout << "Parsing code passed!" << std::endl;
 
-        SemanticChecker().check(ast.get());
-        CodeGenerator(ast.get(), "out.asm").generate();
+        SemanticChecker checker;
+        checker.check(ast.get());
+        std::cout << "Semantic checking code passed!" << std::endl;
 
-        std::cout << "OK!" << std::endl;
+        CodeGenerator generator(ast.get(), "out.asm");
+        generator.generate();
+        std::cout << "Generating code passed!" << std::endl;
 
     }
     catch (const std::exception& e)
