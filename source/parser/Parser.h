@@ -16,6 +16,8 @@ private:
 
     bool checkToken(TokenType type) const;
 
+    bool isLValue(Expression* expression) const;
+
     bool matcher(TokenType type);
 
     void expectManagement(TokenType type, const char* message);
