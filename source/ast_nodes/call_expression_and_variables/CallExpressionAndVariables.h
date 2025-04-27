@@ -1,7 +1,7 @@
 #include "Statements.h"
 #pragma once
 
-enum class VariableType : uint8_t { Int, Float, Char, Bool, Box, Void };
+enum class VariableType: uint8_t { Int, Float, Char, Bool, Box, Void };
 
 struct VariableDeclaration: public Statement
 {
@@ -37,4 +37,13 @@ public:
 
 };
 
+struct CastExpression: public Expression
+{
+public:
 
+    VariableType targetType;
+    std::unique_ptr<Expression> value;
+
+    CastExpression(VariableType target, std::unique_ptr<Expression> value);
+
+};
