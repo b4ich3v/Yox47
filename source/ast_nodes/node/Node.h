@@ -15,6 +15,7 @@ enum class NodeType : uint8_t
     UNARY_EXPRESSION,
     CALL_EXPRESSION,
     INDEX_EXPRESSION,
+    ASSIGNMENT_EXPRESSION,
 
     EXPRESSION_STATEMENT,
     RETURN_STATEMENT,
@@ -43,3 +44,4 @@ public:
     virtual ~Node() = default;
 
 };
+
