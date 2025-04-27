@@ -24,3 +24,8 @@ BoxLiteral::BoxLiteral(std::vector<std::unique_ptr<Expression>> elements):
 IndexExpression::IndexExpression(std::unique_ptr<Expression> base,
 	std::unique_ptr<Expression> index): 
 	Expression(NodeType::INDEX_EXPRESSION), base(std::move(base)), index(std::move(index)) {}
+
+AssignmentExpression::AssignmentExpression(std::unique_ptr<Expression> target,
+	std::unique_ptr<Expression> value):
+	Expression(NodeType::ASSIGNMENT_EXPRESSION),
+	target(std::move(target)), value(std::move(value)) {}
