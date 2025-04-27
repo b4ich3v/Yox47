@@ -100,3 +100,15 @@ public:
         std::unique_ptr<Expression> index);
 
 };
+
+struct AssignmentExpression: public Expression
+{
+public:
+
+    std::unique_ptr<Expression> target;
+    std::unique_ptr<Expression> value;
+    
+    AssignmentExpression(std::unique_ptr<Expression> target,
+        std::unique_ptr<Expression> value);
+
+};
