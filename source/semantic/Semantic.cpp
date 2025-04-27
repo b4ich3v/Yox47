@@ -1,7 +1,7 @@
 #include "Semantic.h"
 #include <stdexcept>
 
-VariableType SemanticChecker::evalType(Expression* expression)
+VariableType SemanticChecker::evaluateType(Expression* expression)
 {
 
     switch (expression->type)
@@ -25,20 +25,46 @@ VariableType SemanticChecker::evalType(Expression* expression)
     case NodeType::BINARY_EXPRESSION: 
     {
 
-        auto binaryExpression = (BinaryExpression*)(expression);
-        return evalType(binaryExpression->left.get());      
+        auto* binaryExpression = (BinaryExpression*)expression;
+        VariableType left = evaluateType(binaryExpression->left.get());
+        VariableType right = evaluateType(binaryExpression->right.get());
+
+        return (left == VariableType::Float || 
+            right == VariableType::Float) ? VariableType::Float : VariableType::Int;
 
     }
     case NodeType::UNARY_EXPRESSION: 
     {
 
+        if (auto* castExpression = dynamic_cast<CastExpression*>(expression))
+            return castExpression->targetType;
+
         auto unaryExpression = (UnaryExpression*)(expression);
-        return evalType(unaryExpression->operand.get());
+        return evaluateType(unaryExpression->operand.get());
+
+    }
+    case NodeType::ASSIGNMENT_EXPRESSION: 
+    {
+
+        auto* assignmentExpression = (AssignmentExpression*)expression;
+        return evaluateType(assignmentExpression->value.get());  
 
     }
     default: return VariableType::Int; 
 
     }
+
+}
+
+bool SemanticChecker::canImplicitlyCast(VariableType from, VariableType to)
+{
+
+    return (from == VariableType::Int && to == VariableType::Float) ||
+        (from == VariableType::Char && to == VariableType::Int) ||
+        (from == VariableType::Int && to == VariableType::Bool) ||   
+        (from == VariableType::Float && to == VariableType::Bool) ||  
+        (from == VariableType::Bool && to == VariableType::Int) ||   
+        (from == VariableType::Bool && to == VariableType::Float);     
 
 }
 
@@ -104,6 +130,7 @@ void SemanticChecker::visit(Node* node)
     case NodeType::FOR_STATEMENT: visit((ForStatement*)(node)); break;
     case NodeType::BREAK_STATEMENT: visit((BreakStatement*)(node)); break;
     case NodeType::BOX_LITERAL: visit((BoxLiteral*)(node)); break;
+    case NodeType::ASSIGNMENT_EXPRESSION: visit((AssignmentExpression*)(node)); break;
     case NodeType::INDEX_EXPRESSION: visit((IndexExpression*)(node)); break;
     case NodeType::CALL_EXPRESSION: visit((CallExpression*)(node)); break;
     case NodeType::UNARY_EXPRESSION: visit((UnaryExpression*)(node)); break;
@@ -145,7 +172,14 @@ void SemanticChecker::visit(BlockStatement* blockStatement)
 {
 
     symbols.enter();
-    for (auto& currentStatement : blockStatement->statements) visit(currentStatement.get());
+
+    for (auto& currentStatement : blockStatement->statements) 
+    {
+
+        visit(currentStatement.get());
+
+    }
+
     symbols.leave();
 
 }
@@ -176,12 +210,61 @@ void SemanticChecker::visit(ReturnStatement* returnStatement)
     if (returnStatement->value)
     {
 
-        VariableType actual = evalType(returnStatement->value.get());
+        VariableType actual = evaluateType(returnStatement->value.get());
 
         if (actual != *currentReturnType)
             throw std::runtime_error("return type mismatch");
 
     }
+
+}
+
+void SemanticChecker::visit(AssignmentExpression* assignmentExpression)
+{
+
+    visit(assignmentExpression->value.get());
+
+    VariableType right = evaluateType(assignmentExpression->value.get());
+    VariableType left;
+
+    if (assignmentExpression->target->type == NodeType::IDENTIFIER)
+    {
+
+        auto id = (IdentifierExpression*)assignmentExpression->target.get();
+        const VariableInfo* variable = symbols.findVariable(id->name);
+
+        if (!variable) throw std::runtime_error("undeclared identifier " + id->name);
+        left = variable->type;
+
+    }
+    else   
+    {
+
+        left = VariableType::Box;   
+
+    }
+
+    if (left != right)
+    {
+
+        if (canImplicitlyCast(right, left))
+        {
+            
+            assignmentExpression->value = 
+                std::make_unique<CastExpression>(left, 
+                    std::move(assignmentExpression->value));
+
+        }
+        else
+        {
+
+            throw std::runtime_error("type mismatch in assignment");
+
+        }
+
+    }
+
+    visit(assignmentExpression->target.get());
 
 }
 
@@ -260,6 +343,46 @@ void SemanticChecker::visit(BinaryExpression* binaryExpression)
 
     visit(binaryExpression->left.get());
     visit(binaryExpression->right.get());
+
+    VariableType left = evaluateType(binaryExpression->left.get());
+    VariableType right = evaluateType(binaryExpression->right.get());
+
+    if (left == right) return;
+
+    if (left == VariableType::Float && canImplicitlyCast(right, left))
+    {
+
+        binaryExpression->right = std::make_unique<CastExpression>(left, 
+            std::move(binaryExpression->right));
+        return;
+
+    }
+    if (right == VariableType::Float && canImplicitlyCast(left, right))
+    {
+
+        binaryExpression->left = std::make_unique<CastExpression>(right, 
+            std::move(binaryExpression->left));
+        return;
+
+    }
+    if (left == VariableType::Int && canImplicitlyCast(right, left))
+    {
+
+        binaryExpression->right = std::make_unique<CastExpression>(left, 
+            std::move(binaryExpression->right));
+        return;
+
+    }
+    if (right == VariableType::Int && canImplicitlyCast(left, right))
+    {
+
+        binaryExpression->left = std::make_unique<CastExpression>(right, 
+            std::move(binaryExpression->left));
+        return;
+
+    }
+
+    throw std::runtime_error("type mismatch in binary expression");
 
 }
 
