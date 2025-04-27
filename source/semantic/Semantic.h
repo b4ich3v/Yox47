@@ -44,7 +44,7 @@ private:
     int loopDepth = 0;
     int chooseDepth = 0;
 
-    VariableType evalType(Expression* e);
+    static bool canImplicitlyCast(VariableType from, VariableType to);
 
     void visit(Node* node);
 
@@ -59,6 +59,8 @@ private:
     void visit(ExpressionStatement* expressionStatement);
 
     void visit(ReturnStatement* returnStatement);
+
+    void visit(AssignmentExpression* essignmentExpression);
 
     void visit(IfStatement* ifStatement);
 
@@ -85,5 +87,7 @@ private:
 public:
 
     void check(Program* program);
+
+    VariableType evaluateType(Expression* expression);
 
 };
