@@ -1,4 +1,6 @@
-nasm -f win64 runtime.asm -o runtime.o
-nasm -f win64 out.asm -o out.o
-gcc runtime.o out.o -o prog.exe -Wl,--subsystem,console -lm
+nasm -f win64 runtime.asm -o runtime.obj
+nasm -f win64 out.asm -o out.obj
+gcc runtime.obj out.obj -o program.exe -nostartfiles -Wl,-e,_start -lkernel32
+
+program.exe > result.txt
 pause
