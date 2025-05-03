@@ -1,1 +1,33 @@
+function fib(n: int) int {
+
+    box dp[1000];
+
+    dp[0] = 0;
+
+    if (n == 0) {
+        return 0;
+    }
+
+    dp[1] = 1;
+ 
+    for (int i = 2; i <= n; i = i + 1) {
+
+        int sum = dp[i - 1] + dp[i - 2];
+        dp[i] = sum;
+
+    }
+
+    int result = dp[n];
+    return result;
+}
+
+function main() int {
+
+    int n = 10;
+    int result = fib(n);
+
+    print_int(result);
+    print_newline();
+    return 0;
+}
 
