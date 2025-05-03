@@ -1,0 +1,24 @@
+function gcd(a: int, b: int) int {
+
+    if (a == 0) return b;
+    if (b == 0) return a;
+
+    int next = 0;
+
+    if (a > b) next = gcd(a - b, b);
+    else next = gcd(a, b - a);
+
+    return next;
+}
+
+function main() int {
+
+    int x = 48;
+    int y = 18;
+
+    int d = gcd(x, y);     
+
+    print_int(d);
+    print_newline();
+    return 0;
+}
