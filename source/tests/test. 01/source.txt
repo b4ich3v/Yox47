@@ -1,0 +1,39 @@
+function rob(nums: box, n: int) int {
+
+    if (n == 0) return 0;
+
+    int prev2 = 0;          
+    int prev1 = nums[0];    
+
+    for (int i = 2; i <= n; i = i + 1) {
+
+        int pick = prev2 + nums[i - 1];   
+        int skip = prev1;                 
+
+        int current = 0;
+
+        if (pick > skip) current = pick;
+        else current = skip;
+
+        prev2 = prev1;
+        prev1 = current;
+    }
+
+    return prev1;    
+}
+
+function main() int {
+
+    box nums1[5] = { 2, 7, 9, 3, 1 };
+    box nums2[4] = { 1, 2, 3, 1};
+
+    int answer1 = rob(nums2, 4);
+    int answer2 = rob(nums1, 5);
+    
+    print_int(answer1);      
+    print_newline();
+    print_int(answer2);
+    print_newline();
+
+    return 0;
+}
