@@ -1,1 +1,38 @@
+function lisFrom(pos: int, prev: int,
+nums: box, n: int) int {
+
+    if (pos == n) {
+        return 0;
+    }
+
+    int cur = nums[pos];
+    int skip = lisFrom(pos + 1, prev, nums, n);
+    int take = 0;
+
+    if (cur > prev) {
+        take = 1 + lisFrom(pos + 1, cur, nums, n);
+    }
+
+    if (take > skip) {
+        return take;
+    }
+
+    return skip;
+}
+
+function lengthOfLIS(nums: box, n: int) int {
+    return lisFrom(0, -2147483648, nums, n);
+}
+
+function main() int {
+
+    box nums[8] = { 10, 9, 2, 5, 3, 7, 101, 18 };
+    int n = 8;
+
+    int ans = lengthOfLIS(nums, n);
+
+    print_int(ans);   
+    print_newline();
+    return 0;
+}
 
