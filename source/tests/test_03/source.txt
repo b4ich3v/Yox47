@@ -1,16 +1,16 @@
-function lisFrom(pos: int, prev: int,
+function lisFrom(position: int, prev: int,
 nums: box, n: int) int {
 
-    if (pos == n) {
+    if (position == n) {
         return 0;
     }
 
-    int cur = nums[pos];
-    int skip = lisFrom(pos + 1, prev, nums, n);
+    int current = nums[position];
+    int skip = lisFrom(position + 1, prev, nums, n);
     int take = 0;
 
-    if (cur > prev) {
-        take = 1 + lisFrom(pos + 1, cur, nums, n);
+    if (current > prev) {
+        take = 1 + lisFrom(position + 1, current, nums, n);
     }
 
     if (take > skip) {
@@ -26,13 +26,15 @@ function lengthOfLIS(nums: box, n: int) int {
 
 function main() int {
 
-    box nums[8] = { 10, 9, 2, 5, 3, 7, 101, 18 };
-    int n = 8;
+    box nums1[8] = { 10, 9, 2, 5, 3, 7, 101, 18 };
+    box nums2[7] = { 7, 7, 7, 7, 7, 7, 7 };
 
-    int ans = lengthOfLIS(nums, n);
+    int answer1 = lengthOfLIS(nums1, 8);
+    int answer2 = lengthOfLIS(nums2, 7);
 
-    print_int(ans);   
+    print_int(answer1);   
     print_newline();
+    print_int(answer2);
+
     return 0;
 }
-
