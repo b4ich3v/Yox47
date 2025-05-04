@@ -90,7 +90,7 @@ bool CodeGenerator::isFloatExpression(Expression* expression)
         return iter != fnReturnTypes.end() && iter->second == VariableType::Float;
 
     }
-    case NodeType::INDEX_EXPRESSION: return false; // we cannot knowe for compile-time
+    case NodeType::INDEX_EXPRESSION: return false; 
     default: return false;
 
     }
@@ -816,3 +816,4 @@ void CodeGenerator::generateStatement(Statement* statement)
     }
 
 }
+
