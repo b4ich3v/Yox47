@@ -1,220 +1,340 @@
+default rel
 section .text
-    extern  printf, fflush, stdout, floor
 
-global print_int
+global print_text, print_int, print_float, print_bool, print_char, print_box, print_newline, exit
+global int_to_bool, float_to_bool, bool_to_int, bool_to_float, int_to_float, float_to_int
+extern  GetStdHandle, WriteFile, ExitProcess, floor
+
+STD_OUTPUT_HANDLE equ -11
+
+print_text:
+    push    rbp
+    mov     rbp, rsp
+    
+    push    rbx
+    push    rdi
+    push    rsi
+    sub     rsp, 32              
+
+    mov     ecx, STD_OUTPUT_HANDLE
+    call    GetStdHandle         
+    mov     rbx, rax
+
+    mov     rcx, rbx             
+    mov     rdx, rdi             
+    mov     r8,  rsi             
+    lea     r9,  [rbp-8]         
+    mov     qword [rsp+32], 0   
+    call    WriteFile
+
+    add     rsp, 32
+    pop     rsi
+    pop     rdi
+    pop     rbx
+    pop     rbp
+    ret
+
+print_newline:
+    push    rbp
+    mov     rbp, rsp
+    push    rdi
+    push    rsi
+    sub     rsp, 32              
+
+    lea     rdi, [rel newline]   
+    mov     rsi, 1               
+    call    print_text
+
+    add     rsp, 32
+    pop     rsi
+    pop     rdi
+    pop     rbp
+    ret
+
 print_int:
-    push rbp
-    mov  rbp, rsp
-    push rbx               
-    sub  rsp, 8            
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 32              
 
-    mov  rdi, int_fmt
-    mov  rsi, [rbp+16]     
-    xor  rax, rax
-    call printf
+    mov     rax, [rbp+16]        
+    lea     rdi, [rel int_buffer + 20] 
+    xor     ebx, ebx             
 
-    mov  rdi, [rel stdout]
-    call fflush
+    cmp     rax, 0
+    jge     .convert
+    neg     rax
+    mov     bl, 1
 
-    add  rsp, 8
-    pop  rbx
-    pop  rbp
+.convert:
+    mov     rcx, 10
+.digit_loop:
+    xor     rdx, rdx
+    div     rcx                   
+    add     dl, '0'
+    dec     rdi
+    mov     [rdi], dl
+    test    rax, rax
+    jnz     .digit_loop
+
+    cmp     bl, 1
+    jne     .ready
+    dec     rdi
+    mov     byte [rdi], '-'
+
+.ready:
+    lea     rsi, [int_buffer + 20]
+    sub     rsi, rdi             
+    call    print_text
+
+    leave
     ret
 
-global print_float
 print_float:
-    push rbp
-    mov  rbp, rsp
-    push rbx
-    sub  rsp, 8
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64              
 
-    mov  rdi, float_fmt
-    movsd xmm0, [rbp+16]
-    mov  rax, 1            
-    call printf
+    movq    xmm0, [rbp+16]       
+    mov     rax, 1000
+    cvtsi2sd xmm1, rax
+    mulsd   xmm0, xmm1           
+    cvttsd2si rax, xmm0             
 
-    mov  rdi, [rel stdout]
-    call fflush
+    mov     rcx, 1000
+    xor     rdx, rdx
+    div     rcx                  
+    mov     r8,  rax             
 
-    add  rsp, 8
-    pop  rbx
-    pop  rbp
+    mov     rcx, 10
+    mov     rbx, rdx
+    mov     rsi, 3
+    lea     rdi, [rel float_buffer + 32]
+.frac_loop:
+    xor     rdx, rdx
+    mov     rax, rbx
+    div     rcx
+    mov     rbx, rax
+    add     dl, '0'
+    dec     rdi
+    mov     [rdi], dl
+    dec     rsi
+    jnz     .frac_loop
+
+    dec     rdi
+    mov     byte [rdi], '.'
+
+    mov     rax, r8
+    mov     rbx, rax
+    cmp     rbx, 0
+    jne     .int_loop
+    dec     rdi
+    mov     byte [rdi], '0'
+    jmp     .emit
+
+.int_loop:
+    xor     rdx, rdx
+    mov     rax, rbx
+    div     rcx
+    mov     rbx, rax
+    add     dl, '0'
+    dec     rdi
+    mov     [rdi], dl
+    test    rax, rax
+    jnz     .int_loop
+
+.emit:
+    lea     rsi, [float_buffer + 32]
+    sub     rsi, rdi
+    call    print_text
+    leave
     ret
 
-global print_bool
 print_bool:
-    push rbp
-    mov  rbp, rsp
-    push rbx
-    sub  rsp, 8
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 32
 
-    mov  al, [rbp+16]
-    cmp  al, 0
-    jne  .print_true
-    mov  rdi, bool_false
-    jmp  .picked
+    mov     al, [rbp+16]
+    cmp     al, 0
+    je      .print_false
+
 .print_true:
-    mov  rdi, bool_true
-.picked:
-    xor  rax, rax
-    call printf
+    lea     rdi, [rel str_true]
+    mov     rsi, 4
+    call    print_text
+    jmp     .done
 
-    mov  rdi, [rel stdout]
-    call fflush
+.print_false:
+    lea     rdi, [rel str_false]
+    mov     rsi, 5
+    call    print_text
 
-    add  rsp, 8
-    pop  rbx
-    pop  rbp
+.done:
+    leave
     ret
 
-%define TYPE_INT   0
-%define TYPE_FLOAT 1
-%define TYPE_BOOL  2
-%define TYPE_BOX   3
+print_char:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 32
 
-global print_box
+    mov     al, [rbp+16]
+    mov     [char_buffer], al
+    lea     rdi, [rel char_buffer]
+    mov     rsi, 1
+    call    print_text
+
+    leave
+    ret
+
 print_box:
-    push rbp
-    mov  rbp, rsp
-    push rbx
-    sub  rsp, 8
+    push    rbp
+    mov     rbp, rsp
+    push    rbx
+    sub     rsp, 8
 
-    mov  rbx, [rbp+16]     
+    mov     rbx, [rbp+16]       
 
-    mov  rdi, box_open_fmt
-    xor  rax, rax
-    call printf
+    lea     rdi, [rel box_open_fmt]
+    mov     rsi, 1
+    call    print_text
 
-    mov  rcx, [rbx]         
-    add  rbx, 8             
+    mov     rcx, [rbx]           
+    add     rbx, 8               
 
-.loop_start:
-    test rcx, rcx
-    jz   .loop_end
+.loop:
+    test    rcx, rcx
+    jz      .end
 
-    mov  rax, [rbx]         
-    add  rbx, 8             
+    mov     rax, [rbx]           
+    add     rbx, 8
 
-    cmp  rax, TYPE_INT
-    je   .print_int_element
-    cmp  rax, TYPE_FLOAT
-    je   .print_float_element
-    cmp  rax, TYPE_BOOL
-    je   .print_bool_element
-    cmp  rax, TYPE_BOX
-    je   .print_box_element
-    jmp  .after_element
+    cmp     rax, 0
+    je      .tag_int
+    cmp     rax, 1
+    je      .tag_float
+    cmp     rax, 2
+    je      .tag_bool
+    cmp     rax, 3
+    je      .tag_box
+    cmp     rax, 4
+    je      .tag_char
+    jmp     .after                
 
-.print_int_element:
-    mov  rax, [rbx]
-    push rax
-    call print_int
-    add  rsp, 8
-    jmp  .after_element
+.tag_int:
+    mov     rax, [rbx]
+    push    rax
+    call    print_int
+    add     rsp, 8
+    jmp     .after
 
-.print_float_element:
-    movq xmm0, [rbx]
-    sub  rsp, 8
-    movsd [rsp], xmm0
-    call print_float
-    add  rsp, 8
-    jmp  .after_element
+.tag_float:
+    movq    xmm0, [rbx]
+    sub     rsp, 8
+    movsd   [rsp], xmm0
+    call    print_float
+    add     rsp, 8
+    jmp     .after
 
-.print_bool_element:
-    movzx rax, byte [rbx]
-    push rax
-    call print_bool
-    add  rsp, 8
-    jmp  .after_element
+.tag_bool:
+    movzx   rax, byte [rbx]
+    push    rax
+    call    print_bool
+    add     rsp, 8
+    jmp     .after
 
-.print_box_element:
-    mov  rax, [rbx]
-    push rax
-    call print_box
-    add  rsp, 8
-    jmp  .after_element
+.tag_box:
+    mov     rax, [rbx]
+    push    rax
+    call    print_box
+    add     rsp, 8
+    jmp     .after
 
-.after_element:
-    add  rbx, 8              
-    dec  rcx
-    jz   .after_sep
-    mov  rdi, separator_fmt
-    xor  rax, rax
-    call printf
-.after_sep:
-    jmp  .loop_start
+.tag_char:
+    movzx   rax, byte [rbx]
+    push    rax
+    call    print_char
+    add     rsp, 8
 
-.loop_end:
-    mov  rdi, box_close_fmt
-    xor  rax, rax
-    call printf
+.after:
+    add     rbx, 8
+    dec     rcx
+    jz      .skip_sep
+    lea     rdi, [rel separator_fmt]
+    mov     rsi, 2
+    call    print_text
+.skip_sep:
+    jmp     .loop
 
-    mov  rdi, [rel stdout]
-    call fflush
+.end:
+    lea     rdi, [rel box_close_fmt]
+    mov     rsi, 2
+    call    print_text
 
-    add  rsp, 8
-    pop  rbx
-    pop  rbp
+    add     rsp, 8
+    pop     rbx
+    pop     rbp
     ret
 
-global int_to_bool
+exit:
+    mov     ecx, 0
+    call    ExitProcess
+
 int_to_bool:
-    mov  rax, [rsp+8]
-    cmp  rax, 0
-    sete al
-    mov  [rsp+16], al
+    mov     rax, [rsp+8]
+    test    rax, rax
+    setne   al
+    movzx   rax, al
+    mov     [rsp+16], rax
     ret
 
-global float_to_bool
 float_to_bool:
-    movsd xmm0, [rsp+8]
-    xorpd xmm1, xmm1
+    movsd   xmm0, [rsp+8]
+    xorpd   xmm1, xmm1
     ucomisd xmm0, xmm1
-    setne al
-    mov   [rsp+16], al
+    setne   al
+    movzx   rax, al
+    mov     [rsp+16], rax
     ret
 
-global bool_to_int
 bool_to_int:
-    movzx rax, byte [rsp+8]
-    mov   [rsp+16], rax
+    movzx   rax, byte [rsp+8]
+    mov     [rsp+16], rax
     ret
 
-global bool_to_float
 bool_to_float:
-    mov   al, [rsp+8]
-    cmp   al, 0
-    je    .bf_false
-    movsd xmm0, [rel float_one]
-    jmp   .bf_done
-.bf_false:
-    xorpd xmm0, xmm0
-.bf_done:
-    movsd [rsp+16], xmm0
+    mov     al, [rsp+8]
+    cmp     al, 0
+    je      .zero
+    movsd   xmm0, [rel float_one]
+    jmp     .done
+.zero:
+    xorpd   xmm0, xmm0
+.done:
+    movsd   [rsp+16], xmm0
     ret
 
-float_one: dq 1.0
-
-global int_to_float
 int_to_float:
-    mov   rax, [rsp+8]
+    mov     rax, [rsp+8]
     cvtsi2sd xmm0, rax
-    movsd [rsp+16], xmm0
+    movsd   [rsp+16], xmm0
     ret
 
-global float_to_int
 float_to_int:
-    movsd xmm0, [rsp+8]
-    call  floor
+    movsd   xmm0, [rsp+8]
+    call    floor              
     cvttsd2si rax, xmm0
-    mov   [rsp+16], rax
+    mov     [rsp+16], rax
     ret
 
-section .rodata
-int_fmt:       db "%lld",10,0
-float_fmt:     db "%f",10,0
-bool_true:     db "true",10,0
-bool_false:    db "false",10,0
-box_open_fmt:  db "[",0
-box_close_fmt: db "]",10,0
-separator_fmt: db ", ",0
+section .data
+int_buffer      times 21 db 0
+float_buffer    times 33 db 0
+char_buffer     db 0
+str_true        db "true"
+str_false       db "false"
+box_open_fmt    db "["
+box_close_fmt   db "]", 10, 0
+separator_fmt   db ", ", 0
+float_one       dq 1.0
+newline         db 10
