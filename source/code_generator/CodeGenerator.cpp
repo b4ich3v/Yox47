@@ -10,6 +10,7 @@ const char* CodeGenerator::typeTag(NodeType type)
     case NodeType::FLOAT_LITERAL: return "1"; 
     case NodeType::BOOL_LITERAL: return "2"; 
     case NodeType::BOX_LITERAL: return "3"; 
+    case NodeType::CHAR_LITERAL: return "4";
     default: return "0";
 
     }
@@ -118,6 +119,7 @@ void CodeGenerator::generate()
     generateLine("extern print_box");
     generateLine("extern malloc");
     generateLine("extern printf");
+    generateLine("extern print_newline");
     generateLine("extern fflush");
     generateLine("");
 
@@ -208,31 +210,39 @@ void CodeGenerator::generateExpression(Expression* expression)
     case NodeType::BOX_LITERAL:
     {
 
-        auto* boxLiteral = (BoxLiteral*)expression;
-        int size = (int)boxLiteral->elements.size();
+        auto* boxLiteral = (BoxLiteral*)(expression);
+        const std::size_t bytes = boxLiteral->elements.size() * 16 + 8;   
 
-        generateLine("; allocate space for box with " + std::to_string(size) + " elements");
-        generateLine("mov rdi, " + std::to_string(8 + size * 16));
-        generateLine("call malloc");
-        generateLine("mov rbx, rax");
-        generateLine("mov qword [rbx], " + std::to_string(size));
-        generateLine("add rbx, 8"); 
+        generateLine("mov  rcx, " + std::to_string(bytes));        
+        generateLine("call malloc");                               
+        generateLine("mov  rdx, rax");                             
 
-        for (auto& currentElement : boxLiteral->elements)
+        generateLine("mov  rax, " + std::to_string(boxLiteral->elements.size()));
+        generateLine("mov  [rdx], rax");                           
+        generateLine("lea  rbx, [rdx+8]");                         
+
+        for (auto& elemUP : boxLiteral->elements) 
         {
 
-            generateLine("mov qword [rbx], " + std::string(typeTag(currentElement->type)));
-            generateLine("add rbx, 8");
-            generateExpression(currentElement.get());
-            generateLine("mov [rbx], rax");
+            Expression* element = elemUP.get();
+
+            generateLine(std::string("mov qword [rbx], ") + typeTag(element->type));
+            generateLine("add rbx, 8");       
+
+            generateLine("push rbx");         
+            generateExpression(element);          
+            generateLine("pop  rbx");          
+
+            if (isFloatExpression(element))
+                generateLine("movq [rbx], xmm0");
+            else
+                generateLine("mov  [rbx], rax");
+
             generateLine("add rbx, 8");
 
         }
 
-        generateLine("sub rbx, " + std::to_string(size * 16));
-        generateLine("sub rbx, 8");
-        generateLine("mov rax, rbx");
-
+        generateLine("mov  rax, rdx");                             
         break;
 
     }
@@ -242,6 +252,9 @@ void CodeGenerator::generateExpression(Expression* expression)
         auto* id = (IdentifierExpression*)expression;
         int off = localOffsets[id->name];
         generateLine("mov rax, [rbp-" + std::to_string(off) + "] ; " + id->name);
+
+        if (varTypes[id->name] == VariableType::Float)
+            generateLine("movq xmm0, rax");
 
         break;
 
@@ -323,27 +336,58 @@ void CodeGenerator::generateExpression(Expression* expression)
         if (isFloat)
         {
             
-            generateExpression(binaryExpression->right.get());    
+            generateExpression(binaryExpression->right.get());
             generateLine("sub rsp, 8");
             generateLine("movq [rsp], xmm0");
 
-            generateExpression(binaryExpression->left.get());    
+            generateExpression(binaryExpression->left.get());
             generateLine("movq xmm1, [rsp]");
             generateLine("add rsp, 8");
 
             switch (binaryExpression->oper)
             {
 
-            case TokenType::PLUS:  generateLine("addsd xmm0, xmm1"); break;
-            case TokenType::MINUS: generateLine("subsd xmm0, xmm1"); break;
-            case TokenType::STAR:  generateLine("mulsd xmm0, xmm1"); break;
-            case TokenType::SLASH: generateLine("divsd xmm0, xmm1"); break;
-            default: generateLine("; TODO!!!"); break;
+            case TokenType::PLUS:  generateLine("addsd xmm0, xmm1");  generateLine("movq rax, xmm0"); break;
+            case TokenType::MINUS: generateLine("subsd xmm0, xmm1");  generateLine("movq rax, xmm0"); break;
+            case TokenType::STAR:  generateLine("mulsd xmm0, xmm1");  generateLine("movq rax, xmm0"); break;
+            case TokenType::SLASH: generateLine("divsd xmm0, xmm1");  generateLine("movq rax, xmm0"); break;
+            case TokenType::GREATER:
+                generateLine("comisd xmm0, xmm1");   
+                generateLine("seta  al");
+                generateLine("movzx rax, al");
+                break;
+            case TokenType::LESS:
+                generateLine("comisd xmm0, xmm1");   
+                generateLine("setb  al");
+                generateLine("movzx rax, al");
+                break;
+            case TokenType::EQUAL_EQUAL:
+                generateLine("comisd xmm0, xmm1");   
+                generateLine("sete  al");
+                generateLine("movzx rax, al");
+                break;
+            case TokenType::LESS_EQUAL:
+                generateLine("comisd xmm0, xmm1");
+                generateLine("setbe al");        
+                generateLine("movzx rax, al");
+                break;
+            case TokenType::GREATER_EQUAL:
+                generateLine("comisd xmm0, xmm1");
+                generateLine("setae al");        
+                generateLine("movzx rax, al");
+                break;
+            case TokenType::NOT_EQUAL:
+                generateLine("comisd xmm0, xmm1");
+                generateLine("setne al");        
+                generateLine("movzx rax, al");
+                break;
+            default:
+                generateLine("; TODO FLOAT-оператор");
+                break;
 
             }
 
-            generateLine("movq rax, xmm0");        
-            break;
+            break;     
 
         }
 
@@ -411,32 +455,32 @@ void CodeGenerator::generateExpression(Expression* expression)
         break;
 
     }
-    case NodeType::CALL_EXPRESSION: 
+    case NodeType::CALL_EXPRESSION:          
     {
 
-        auto* callExpression = (CallExpression*)expression;
+        auto* callExpression = (CallExpression*)(expression);
 
-        for (auto iter = callExpression->arguments.rbegin(); iter != callExpression->arguments.rend(); iter++)
+        for (auto iter = callExpression->arguments.rbegin();
+            iter != callExpression->arguments.rend(); ++iter)
         {
 
-            generateExpression(iter->get());
-            generateLine("push rax");
+            generateExpression(iter->get());   
+            generateLine("push rax");        
 
         }
 
-        if (callExpression->arguments.size() & 1)
-        {
+        generateLine("call " + callExpression->callee);
 
-            generateLine("sub rsp, 8");
-            generateLine("call " + callExpression->callee);
-            generateLine("add rsp, " + std::to_string(callExpression->arguments.size() * 8 + 8));
-
-        }
-        else 
-        {
-
-            generateLine("call " + callExpression->callee);
+        if (!callExpression->arguments.empty())
             generateLine("add rsp, " + std::to_string(callExpression->arguments.size() * 8));
+
+        auto rt = fnReturnTypes.find(callExpression->callee);
+
+        if (rt != fnReturnTypes.end() &&
+            rt->second == VariableType::Float)
+        {
+
+            generateLine("movq rax, xmm0");
 
         }
 
@@ -534,6 +578,10 @@ void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration)
     generateStatement(functionDeclaration->body.get());
 
     generateLine(".return:");
+
+    if (functionDeclaration->returnType == VariableType::Float)
+        generateLine("movq xmm0, rax");
+
     generateLine("pop rbx");
     generateLine("mov rsp, rbp"); 
     generateLine("pop rbp");
@@ -768,4 +816,3 @@ void CodeGenerator::generateStatement(Statement* statement)
     }
 
 }
-
