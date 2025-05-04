@@ -1,0 +1,25 @@
+function intSqrt(n: int) int {
+    if (n < 0) return -1;
+
+    int k = 0;
+    int step = 1;
+    int remain = n;
+
+    while (remain >= 0) {
+        remain = remain - step;
+        step = step + 2;
+        k = k + 1;
+    }
+
+    return k - 1;
+}
+
+function main() int {
+    int value = 12345;
+    int root = intSqrt(value);
+
+    print_int(root);
+    print_newline();
+
+    return 0;
+}
