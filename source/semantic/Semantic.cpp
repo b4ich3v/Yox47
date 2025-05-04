@@ -12,7 +12,7 @@ VariableType SemanticChecker::evaluateType(Expression* expression)
     case NodeType::CHAR_LITERAL: return VariableType::Char;
     case NodeType::BOOL_LITERAL: return VariableType::Bool;
     case NodeType::BOX_LITERAL: return VariableType::Box;
-    case NodeType::IDENTIFIER: 
+    case NodeType::IDENTIFIER:
     {
 
         auto id = (IdentifierExpression*)(expression);
@@ -22,18 +22,18 @@ VariableType SemanticChecker::evaluateType(Expression* expression)
         return variable->type;
 
     }
-    case NodeType::BINARY_EXPRESSION: 
+    case NodeType::BINARY_EXPRESSION:
     {
 
         auto* binaryExpression = (BinaryExpression*)expression;
         VariableType left = evaluateType(binaryExpression->left.get());
         VariableType right = evaluateType(binaryExpression->right.get());
 
-        return (left == VariableType::Float || 
+        return (left == VariableType::Float ||
             right == VariableType::Float) ? VariableType::Float : VariableType::Int;
 
     }
-    case NodeType::UNARY_EXPRESSION: 
+    case NodeType::UNARY_EXPRESSION:
     {
 
         if (auto* castExpression = dynamic_cast<CastExpression*>(expression))
@@ -43,14 +43,14 @@ VariableType SemanticChecker::evaluateType(Expression* expression)
         return evaluateType(unaryExpression->operand.get());
 
     }
-    case NodeType::ASSIGNMENT_EXPRESSION: 
+    case NodeType::ASSIGNMENT_EXPRESSION:
     {
 
         auto* assignmentExpression = (AssignmentExpression*)expression;
-        return evaluateType(assignmentExpression->value.get());  
+        return evaluateType(assignmentExpression->value.get());
 
     }
-    default: return VariableType::Int; 
+    default: return VariableType::Int;
 
     }
 
@@ -61,10 +61,10 @@ bool SemanticChecker::canImplicitlyCast(VariableType from, VariableType to)
 
     return (from == VariableType::Int && to == VariableType::Float) ||
         (from == VariableType::Char && to == VariableType::Int) ||
-        (from == VariableType::Int && to == VariableType::Bool) ||   
-        (from == VariableType::Float && to == VariableType::Bool) ||  
-        (from == VariableType::Bool && to == VariableType::Int) ||   
-        (from == VariableType::Bool && to == VariableType::Float);     
+        (from == VariableType::Int && to == VariableType::Bool) ||
+        (from == VariableType::Float && to == VariableType::Bool) ||
+        (from == VariableType::Bool && to == VariableType::Int) ||
+        (from == VariableType::Bool && to == VariableType::Float);
 
 }
 
@@ -173,7 +173,7 @@ void SemanticChecker::visit(BlockStatement* blockStatement)
 
     symbols.enter();
 
-    for (auto& currentStatement : blockStatement->statements) 
+    for (auto& currentStatement : blockStatement->statements)
     {
 
         visit(currentStatement.get());
@@ -206,7 +206,7 @@ void SemanticChecker::visit(ReturnStatement* returnStatement)
     if (!currentReturnType) throw std::runtime_error("return outside of function");
     if (returnStatement->value) visit(returnStatement->value.get());
     if (!returnStatement->value && *currentReturnType != VariableType::Void) throw std::runtime_error("missing return value");
-    
+
     if (returnStatement->value)
     {
 
@@ -237,10 +237,10 @@ void SemanticChecker::visit(AssignmentExpression* assignmentExpression)
         left = variable->type;
 
     }
-    else   
+    else
     {
 
-        left = VariableType::Box;   
+        left = VariableType::Box;
 
     }
 
@@ -249,9 +249,9 @@ void SemanticChecker::visit(AssignmentExpression* assignmentExpression)
 
         if (canImplicitlyCast(right, left))
         {
-            
-            assignmentExpression->value = 
-                std::make_unique<CastExpression>(left, 
+
+            assignmentExpression->value =
+                std::make_unique<CastExpression>(left,
                     std::move(assignmentExpression->value));
 
         }
@@ -352,7 +352,7 @@ void SemanticChecker::visit(BinaryExpression* binaryExpression)
     if (left == VariableType::Float && canImplicitlyCast(right, left))
     {
 
-        binaryExpression->right = std::make_unique<CastExpression>(left, 
+        binaryExpression->right = std::make_unique<CastExpression>(left,
             std::move(binaryExpression->right));
         return;
 
@@ -360,7 +360,7 @@ void SemanticChecker::visit(BinaryExpression* binaryExpression)
     if (right == VariableType::Float && canImplicitlyCast(left, right))
     {
 
-        binaryExpression->left = std::make_unique<CastExpression>(right, 
+        binaryExpression->left = std::make_unique<CastExpression>(right,
             std::move(binaryExpression->left));
         return;
 
@@ -368,7 +368,7 @@ void SemanticChecker::visit(BinaryExpression* binaryExpression)
     if (left == VariableType::Int && canImplicitlyCast(right, left))
     {
 
-        binaryExpression->right = std::make_unique<CastExpression>(left, 
+        binaryExpression->right = std::make_unique<CastExpression>(left,
             std::move(binaryExpression->right));
         return;
 
@@ -376,7 +376,7 @@ void SemanticChecker::visit(BinaryExpression* binaryExpression)
     if (right == VariableType::Int && canImplicitlyCast(left, right))
     {
 
-        binaryExpression->left = std::make_unique<CastExpression>(right, 
+        binaryExpression->left = std::make_unique<CastExpression>(right,
             std::move(binaryExpression->left));
         return;
 
