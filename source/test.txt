@@ -1,43 +1,58 @@
-function fib(n: int) int {
-    if (n == 0)  return 0;
-    if (n == 1)  return 1;
-    return fib(n - 1) + fib(n - 2);
+function square(n: int) int {
+    return n * n;
 }
 
-function banner() {
-    char c = '=';
-    for (int i = 0; i < 10; i = i + 1) {
-        print(c);
+function sumBox(b: box, len: int) int {
+    int s = 0;
+    for (int i = 0; i < len; i = i + 1) {
+        s = s + b[i];
     }
+    return s;
 }
 
 function main() int {
-    banner();                     
-    int k = 7;
-    int fk = fib(k);               
-    
-    box data[4] = { fk, k, 'X', true };
-    print(data);
 
-    choose (fk) {
-        case 8:  fk = fk + 80;
-        case 13: fk = fk + 130;    
-        default: fk = fk + 1;
+    int a = 7;
+    int sq = square(a);
+    print_int(sq);
+    print_newline();
+
+    float x = 3.14;
+    float y = 2.0;
+    float z = x * y;
+    print_float(z);
+    print_newline();
+
+    box arr[5] = { 1, 2, 3, 4, 5 };
+    int len = 5;
+    print_newline();
+
+    int total = sumBox(arr, len);
+    print_int(total);
+    print_newline();
+
+    choose(arr[2]) {
+        case 10: {
+            char ch = 'A';
+            print_char(ch);
+            print_newline();
+            break;
+        }
+        default: {
+            char ch = '?';
+            print_char(ch);
+            print_newline();
+            break;
+        }
     }
 
-    int counter = 0;
-    while (counter < 3) {
-        print(counter);
-        counter = counter + 1;
-    }
+    bool flag = total > 10;
+    print_bool(flag);
+    print_newline();
 
-    {
-        int fk = 42;
-        print(fk);                 
-    }
+    char c = 'X';
+    print_char(c);
+    print_newline();
 
-    print(fk);                     
-    banner();                      
-
-    return fk;                     
+    return 0;
 }
