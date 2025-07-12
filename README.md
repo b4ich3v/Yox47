@@ -148,8 +148,5 @@ The compiler expects a `test.txt` file in the root with the source code. It read
     <img src="screenshots/screenshot1.png" alt="Image 1" style="height: 300px; object-fit: contain;">
     <img src="screenshots/screenshot2.png" alt="Image 2" style="height: 300px; object-fit: contain;">
     <img src="screenshots/screenshot3.png" alt="Image 3" style="height: 300px; object-fit: contain;">
+    <img src="screenshots/screenshot4.png" alt="Image 4" style="height: 300px; object-fit: contain;">  
 </div>
-
-
-
-
