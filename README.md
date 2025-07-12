@@ -144,9 +144,10 @@ The compiler expects a `test.txt` file in the root with the source code. It read
 
 ---
 
-<div style="display: flex; flex-wrap: nowrap; gap: 10px;">
+<div style="display: flex; flex-wrap: nowrap; gap: 10px; overflow-x: auto;">
     <img src="screenshots/screenshot1.png" alt="Image 1" width="1000"/>
     <img src="screenshots/screenshot2.png" alt="Image 2" width="1000"/>
     <img src="screenshots/screenshot3.png" alt="Image 3" width="1000"/>
 </div>
+
 
