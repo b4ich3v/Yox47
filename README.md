@@ -108,7 +108,7 @@ The compiler expects a `test.txt` file in the root with the source code. It read
 | Concept                   | Syntax Example                                      |
 |---------------------------|------------------------------------------------------|
 | **Variable declaration**  | `int x = 5;`                                         |
-| **Function declaration**  | `function add(a: int, b: int) int { return a + b; }}` |
+| **Function declaration**  | `function add(a: int, b: int) int { return a + b; }` |
 | **Function return**       | `return x * 2;`                                      |
 | **Array access**          | `int y = arr[2];`                                    |
 | **Array assign**          | `arr[3] = 42;`                                       |
