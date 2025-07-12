@@ -62,10 +62,8 @@
 | **Variable declaration**  | `int x = 5;`                                         |
 | **Function declaration**  | `function add(a: int, b: int) int { return a + b; }}` |
 | **Function return**       | `return x * 2;`                                      |
-| **Heap array**            | `box<int> arr = box_make(10);`                      |
 | **Array access**          | `int y = arr[2];`                                    |
 | **Array assign**          | `arr[3] = 42;`                                       |
-| **Array length**          | `int len = box_length(arr);`                        |
 | **If/else**               | `if (x > 0) { ... } else { ... }`                   |
 | **While loop**            | `while (x < 10) { x = x + 1; }`                     |
 | **For loop**              | `for (int i = 0; i < 10; i = i + 1) { ... }`        |
