@@ -4,6 +4,8 @@
 
 **Yox47** is a compact, statically‑typed, block‑structured programming language, written  in C++. It covers each stage of the toolchain — from tokenization and abstract syntax trees to semantic validation and optimized assembly emission. Yox47’s type system includes primitive types (`int`, `float`, `char`, `bool`), heap‑allocated `box[T]` arrays, and explicit function signatures. Control flow constructs comprise `if/else`, `for`, `while`, `break`, and `choose/case`.
 
+---
+
 ## Supported Features
 
 - **Types:**
@@ -39,6 +41,8 @@
 - **Toolchain:**
   - Full compilation pipeline: lexer → parser → AST → semantic analysis → code generation
 
+---
+
 ## Not Yet Supported / Known Limitations
 
 - No support for:
@@ -54,6 +58,8 @@
 
 - Statically linked only - no dynamic linking
 - No support for multithreading or concurrency primitives
+
+---
 
 ## Compilation Pipeline Example (Internal Flow)
 
@@ -76,9 +82,13 @@ CodeGenerator generator(ast.get(), "out.asm");
 generator.generate();
 ```
 
+---
+
 ## File Input Format
 
 The compiler expects a `test.txt` file in the root with the source code. It reads the entire file into memory before processing.
+
+---
 
 ## File Structure Summary
 
@@ -94,6 +104,8 @@ The compiler expects a `test.txt` file in the root with the source code. It read
 | `build.bat`                        | Batch script for building (Windows)          |
 | `test.txt`                         | Input source file for the compiler           |
 
+---
+
 ## How to Build and Run
 
 1. **Prepare Input**: Place your source code in `source/test.txt`
@@ -103,6 +115,9 @@ The compiler expects a `test.txt` file in the root with the source code. It read
    ./build.bat  # or compile manually with NASM/FASM + linker
    ./a.exe      # if you compiled to an executable
    ```
+
+---
+   
 ## Syntax Overview
 
 | Concept                   | Syntax Example                                      |
@@ -126,3 +141,21 @@ The compiler expects a `test.txt` file in the root with the source code. It read
 | **Empty block**           | `{}`                                                |
 | **Comment (single-line)** | `// this is a comment`                              |
 | **Comment (multi-line)**  | `/* start ... end */`                               |
+
+---
+
+<br><br>
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+    <img src="screenshots/screenshot1.png" alt="Image 1" width="1000"/>
+</div>
+<br><br>
+<br><br>
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+    <img src="screenshots/screenshot2.png" alt="Image 1" width="1000"/>
+</div>
+<br><br>
+<br><br>
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+    <img src="screenshots/screenshot6.png" alt="Image 1" width="1000"/>
+</div>
+<br><br>
