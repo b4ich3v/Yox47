@@ -57,16 +57,26 @@
 
 ## Syntax Overview
 
-| Concept              | Syntax Example                             |
-|----------------------|---------------------------------------------|
-| **Variable declaration** | `int x = 5;`                            |
-| **Function declaration** | `int add(int a, int b) { return a + b; }` |
-| **Heap array**           | `box<int> arr = box_make(10);`         |
-| **If/else**              | `if (x > 0) { ... } else { ... }`      |
-| **While loop**           | `while (x < 10) { x = x + 1; }`        |
-| **For loop**             | `for (int i = 0; i < 10; i = i + 1) { ... }` |
-| **Choose/case**          | `choose(x) { case 1: ...; case 2: ...; }` |
-| **Function call**        | `int y = add(3, 4);`                   |
-| **Logical expression**   | `if (a > 0 && b < 5) { ... }`          |
-| **Array access**         | `int y = arr[2];`                      |
-| **Assignment**           | `x = x + 1;`                           |
+| Concept                   | Syntax Example                                      |
+|---------------------------|------------------------------------------------------|
+| **Variable declaration**  | `int x = 5;`                                         |
+| **Function declaration**  | `int add(int a, int b) { return a + b; }`           |
+| **Function return**       | `return x * 2;`                                      |
+| **Heap array**            | `box<int> arr = box_make(10);`                      |
+| **Array access**          | `int y = arr[2];`                                    |
+| **Array assign**          | `arr[3] = 42;`                                       |
+| **Array length**          | `int len = box_length(arr);`                        |
+| **If/else**               | `if (x > 0) { ... } else { ... }`                   |
+| **While loop**            | `while (x < 10) { x = x + 1; }`                     |
+| **For loop**              | `for (int i = 0; i < 10; i = i + 1) { ... }`        |
+| **Choose/case**           | `choose(x) { case 1: ...; case 2: ...; }`           |
+| **Break statement**       | `break;`                                             |
+| **Function call**         | `int y = add(3, 4);`                                |
+| **Logical expression**    | `if (a > 0 && b < 5) { ... }`                       |
+| **Arithmetic expression** | `int z = x * (y + 2);`                              |
+| **Comparison**            | `if (a != b) { ... }`                               |
+| **Assignment**            | `x = x + 1;`                                        |
+| **Block scoping**         | `{ int temp = 3; ... }`                             |
+| **Empty block**           | `{}`                                                |
+| **Comment (single-line)** | `// this is a comment`                              |
+| **Comment (multi-line)**  | `/* start ... end */`                               |
