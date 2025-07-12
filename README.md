@@ -144,7 +144,7 @@ The compiler expects a `test.txt` file in the root with the source code. It read
 
 ---
 
-<div style="display: flex; gap: 30px; justify-content: center;">
+<div style="display: flex; gap: 40px; justify-content: center;">
     <img src="screenshots/screenshot1.png" alt="Image 1" style="height: 400px; object-fit: contain;">
     <img src="screenshots/screenshot2.png" alt="Image 2" style="height: 400px; object-fit: contain;">
     <img src="screenshots/screenshot3.png" alt="Image 3" style="height: 400px; object-fit: contain;">
