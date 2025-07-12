@@ -52,7 +52,7 @@
   - Strings as a native, first-class type
   - Standard libraries
 
-- Statically linked only — no dynamic linking
+- Statically linked only - no dynamic linking
 - No support for multithreading or concurrency primitives
 
 ## Syntax Overview
