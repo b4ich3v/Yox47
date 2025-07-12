@@ -60,7 +60,7 @@
 | Concept                   | Syntax Example                                      |
 |---------------------------|------------------------------------------------------|
 | **Variable declaration**  | `int x = 5;`                                         |
-| **Function declaration**  | `function add(a:int, b:int) int { return a + b; }}`  |
+| **Function declaration**  | `function add(a: int, b: int) int { return a + b; }}` |
 | **Function return**       | `return x * 2;`                                      |
 | **Heap array**            | `box<int> arr = box_make(10);`                      |
 | **Array access**          | `int y = arr[2];`                                    |
