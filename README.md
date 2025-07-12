@@ -55,6 +55,54 @@
 - Statically linked only - no dynamic linking
 - No support for multithreading or concurrency primitives
 
+## Compilation Pipeline Example (Internal Flow)
+
+Yox47 follows a strict pipeline:
+
+1. **Lexical Analysis** – `Lexer` tokenizes the source file.
+2. **Parsing** – `Parser` builds the AST from tokens.
+3. **Semantic Analysis** – Type checks and validates correctness.
+4. **Code Generation** – Emits assembly into `out.asm`.
+
+Example internal flow from `main.cpp`:
+
+```cpp
+Lexer lexer(source.c_str(), source.size());
+Parser parser(lexer);
+auto ast = parser.parseProgram();
+SemanticChecker checker;
+checker.check(ast.get());
+CodeGenerator generator(ast.get(), "out.asm");
+generator.generate();
+```
+
+## File Input Format
+
+The compiler expects a `test.txt` file in the root with the source code. It reads the entire file into memory before processing.
+
+## File Structure Summary
+
+| Folder/File                        | Purpose                                      |
+|------------------------------------|----------------------------------------------|
+| `Lexer.*`                          | Tokenizes source code                        |
+| `Parser.*`                         | Builds the AST                               |
+| `Semantic.*`                       | Validates types and scopes                   |
+| `CodeGenerator.*`                  | Emits assembly instructions                  |
+| `ast_nodes/`                       | All AST node types                           |
+| `runtime.asm`                      | Required runtime for generated assembly      |
+| `out.asm`                          | Final output file                            |
+| `build.bat`                        | Batch script for building (Windows)          |
+| `test.txt`                         | Input source file for the compiler           |
+
+## How to Build and Run
+
+1. **Prepare Input**: Place your source code in `source/test.txt`
+2. **Build and Run**:
+   ```sh
+   cd source
+   ./build.bat  # or compile manually with NASM/FASM + linker
+   ./a.exe      # if you compiled to an executable
+   ```
 ## Syntax Overview
 
 | Concept                   | Syntax Example                                      |
