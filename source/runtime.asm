@@ -64,13 +64,22 @@ print_int:
 print_float:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 64
+    sub     rsp, 64              
 
-    movq    xmm0, [rbp+16]
+    movq    xmm0, [rbp+16]       
+    xor     r9d, r9d             
+    xorpd   xmm1, xmm1
+    ucomisd xmm0, xmm1
+    jae     .pf_pos
+    mov     r9b, 1
+    xorpd   xmm1, xmm1
+    subsd   xmm1, xmm0
+    movapd  xmm0, xmm1
+.pf_pos:
     mov     rax, 1000
     cvtsi2sd xmm1, rax
-    mulsd   xmm0, xmm1
-    cvttsd2si rax, xmm0
+    mulsd   xmm0, xmm1           
+    cvttsd2si rax, xmm0             
 
     mov     rcx, 1000
     xor     rdx, rdx
@@ -101,7 +110,7 @@ print_float:
     jne     .int_loop
     dec     rdi
     mov     byte [rdi], '0'
-    jmp     .emit
+    jmp     .maybe_sign
 
 .int_loop:
     xor     rdx, rdx
@@ -113,6 +122,12 @@ print_float:
     mov     [rdi], dl
     test    rax, rax
     jnz     .int_loop
+
+.maybe_sign:
+    cmp     r9b, 0
+    je      .emit
+    dec     rdi
+    mov     byte [rdi], '-'
 
 .emit:
     lea     rsi, [rel float_buffer + 32]

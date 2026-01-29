@@ -314,7 +314,9 @@ void CodeGenerator::generateExpression(Expression* expression) {
             }
             case VariableType::Int:
                 generateExpression(castExpression->value.get());
-                generateLine("movzx rax, al");
+                if (isFloatExpression(castExpression->value.get())) {
+                    generateLine("cvttsd2si rax, xmm0");
+                }
                 break;
             case VariableType::Bool: {
                 generateExpression(castExpression->value.get());
