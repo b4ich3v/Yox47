@@ -31,7 +31,6 @@ private:
     void generateExpression(Expression* expression);
 
 public:
-
     explicit CodeGenerator(Program* root, const std::string& fileName);
 
     void generate();
