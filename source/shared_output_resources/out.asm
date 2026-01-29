@@ -7,10 +7,8 @@ extern print_bool
 extern print_char
 extern print_float
 extern print_box
-extern malloc
-extern printf
+extern yox_malloc
 extern print_newline
-extern fflush
 
 square:
 push rbp
@@ -133,8 +131,8 @@ call print_float
 add rsp, 8
 call print_newline
 sub rsp, 8
-mov  rcx, 88
-call malloc
+mov  rdi, 88
+call yox_malloc
 mov  rdx, rax
 mov  rax, 5
 mov  [rdx], rax
@@ -218,6 +216,7 @@ call print_char
 add rsp, 8
 call print_newline
 jmp .Lend_choose_0
+jmp .Lend_choose_0
 .Lcase_0_0:
 sub rsp, 8
 mov rax,65
@@ -227,6 +226,7 @@ push rax
 call print_char
 add rsp, 8
 call print_newline
+jmp .Lend_choose_0
 jmp .Lend_choose_0
 .Lend_choose_0:
 sub rsp, 8
@@ -261,11 +261,11 @@ ret
 
 _start:
 call main
-xor  ecx, ecx
+mov rdi, rax
 call exit
 
-section .rdata align=8
-LC_float_3_14: dq 3.14
+section .rodata align=8
 LC_float_2_0: dq 2.0
+LC_float_3_14: dq 3.14
 .LC_fmt_int   db "%lld", 10, 0
 .LC_fmt_float db "%f",   10, 0

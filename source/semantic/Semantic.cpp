@@ -135,6 +135,12 @@ void SemanticChecker::visit(Node* node) {
 
 void SemanticChecker::visit(Program* program) {
     functions.clear();
+    functions["print_int"] = { VariableType::Void, { VariableType::Int } };
+    functions["print_float"] = { VariableType::Void, { VariableType::Float } };
+    functions["print_bool"] = { VariableType::Void, { VariableType::Bool } };
+    functions["print_char"] = { VariableType::Void, { VariableType::Char } };
+    functions["print_box"] = { VariableType::Void, { VariableType::Box } };
+    functions["print_newline"] = { VariableType::Void, { } };
     for (auto& currentFunction : program->functions) {
         if (functions.count(currentFunction->name))
             throw std::runtime_error("redefinition of function '" + currentFunction->name + "'");
