@@ -3,62 +3,31 @@ section .text
 
 global print_text, print_int, print_float, print_bool, print_char, print_box, print_newline, exit
 global int_to_bool, float_to_bool, bool_to_int, bool_to_float, int_to_float, float_to_int
-extern  GetStdHandle, WriteFile, ExitProcess, floor
-
-STD_OUTPUT_HANDLE equ -11
+global yox_malloc
 
 print_text:
-    push    rbp
-    mov     rbp, rsp
-    
-    push    rbx
-    push    rdi
-    push    rsi
-    sub     rsp, 32              
-
-    mov     ecx, STD_OUTPUT_HANDLE
-    call    GetStdHandle         
-    mov     rbx, rax
-
-    mov     rcx, rbx             
-    mov     rdx, rdi             
-    mov     r8,  rsi             
-    lea     r9,  [rbp-8]         
-    mov     qword [rsp+32], 0   
-    call    WriteFile
-
-    add     rsp, 32
-    pop     rsi
-    pop     rdi
-    pop     rbx
-    pop     rbp
+    mov     rax, 1
+    mov     rdx, rsi
+    mov     rsi, rdi
+    mov     rdi, 1
+    syscall
     ret
 
 print_newline:
-    push    rbp
-    mov     rbp, rsp
-    push    rdi
-    push    rsi
-    sub     rsp, 32              
-
-    lea     rdi, [rel newline]   
-    mov     rsi, 1               
+    lea     rdi, [rel newline]
+    mov     rsi, 1
     call    print_text
-
-    add     rsp, 32
-    pop     rsi
-    pop     rdi
-    pop     rbp
     ret
 
 print_int:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 32              
+    push    rbx
+    sub     rsp, 16
 
-    mov     rax, [rbp+16]        
-    lea     rdi, [rel int_buffer + 20] 
-    xor     ebx, ebx             
+    mov     rax, [rbp+16]
+    lea     rdi, [rel int_buffer + 20]
+    xor     ebx, ebx
 
     cmp     rax, 0
     jge     .convert
@@ -69,7 +38,7 @@ print_int:
     mov     rcx, 10
 .digit_loop:
     xor     rdx, rdx
-    div     rcx                   
+    div     rcx
     add     dl, '0'
     dec     rdi
     mov     [rdi], dl
@@ -82,28 +51,30 @@ print_int:
     mov     byte [rdi], '-'
 
 .ready:
-    lea     rsi, [int_buffer + 20]
-    sub     rsi, rdi             
+    lea     rsi, [rel int_buffer + 20]
+    sub     rsi, rdi
     call    print_text
 
-    leave
+    add     rsp, 16
+    pop     rbx
+    pop     rbp
     ret
 
 print_float:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 64              
+    sub     rsp, 64
 
-    movq    xmm0, [rbp+16]       
+    movq    xmm0, [rbp+16]
     mov     rax, 1000
     cvtsi2sd xmm1, rax
-    mulsd   xmm0, xmm1           
-    cvttsd2si rax, xmm0             
+    mulsd   xmm0, xmm1
+    cvttsd2si rax, xmm0
 
     mov     rcx, 1000
     xor     rdx, rdx
-    div     rcx                  
-    mov     r8,  rax             
+    div     rcx
+    mov     r8,  rax
 
     mov     rcx, 10
     mov     rbx, rdx
@@ -143,7 +114,7 @@ print_float:
     jnz     .int_loop
 
 .emit:
-    lea     rsi, [float_buffer + 32]
+    lea     rsi, [rel float_buffer + 32]
     sub     rsi, rdi
     call    print_text
     leave
@@ -152,7 +123,7 @@ print_float:
 print_bool:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 32
+    sub     rsp, 16
 
     mov     al, [rbp+16]
     cmp     al, 0
@@ -176,7 +147,7 @@ print_bool:
 print_char:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 32
+    sub     rsp, 16
 
     mov     al, [rbp+16]
     mov     [char_buffer], al
@@ -193,20 +164,20 @@ print_box:
     push    rbx
     sub     rsp, 8
 
-    mov     rbx, [rbp+16]       
+    mov     rbx, [rbp+16]
 
     lea     rdi, [rel box_open_fmt]
     mov     rsi, 1
     call    print_text
 
-    mov     rcx, [rbx]           
-    add     rbx, 8               
+    mov     rcx, [rbx]
+    add     rbx, 8
 
 .loop:
     test    rcx, rcx
     jz      .end
 
-    mov     rax, [rbx]           
+    mov     rax, [rbx]
     add     rbx, 8
 
     cmp     rax, 0
@@ -219,7 +190,7 @@ print_box:
     je      .tag_box
     cmp     rax, 4
     je      .tag_char
-    jmp     .after                
+    jmp     .after
 
 .tag_int:
     mov     rax, [rbx]
@@ -277,8 +248,8 @@ print_box:
     ret
 
 exit:
-    mov     ecx, 0
-    call    ExitProcess
+    mov     rax, 60
+    syscall
 
 int_to_bool:
     mov     rax, [rsp+8]
@@ -322,9 +293,19 @@ int_to_float:
 
 float_to_int:
     movsd   xmm0, [rsp+8]
-    call    floor              
     cvttsd2si rax, xmm0
     mov     [rsp+16], rax
+    ret
+
+yox_malloc:
+    mov     rsi, rdi
+    xor     rdi, rdi
+    mov     rdx, 3
+    mov     r10, 0x22
+    mov     r8, -1
+    xor     r9, r9
+    mov     rax, 9
+    syscall
     ret
 
 section .data

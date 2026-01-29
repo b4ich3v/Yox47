@@ -102,22 +102,20 @@ void CodeGenerator::generate() {
     generateLine("extern print_char");
     generateLine("extern print_float");
     generateLine("extern print_box");
-    generateLine("extern malloc");
-    generateLine("extern printf");
+    generateLine("extern yox_malloc");
     generateLine("extern print_newline");
-    generateLine("extern fflush");
     generateLine("");
 
     generateProgram(root);
               
     generateLine("_start:");
     generateLine("call main");
-    generateLine("xor  ecx, ecx");
+    generateLine("mov rdi, rax");
     generateLine("call exit");
 
     if (!floatPool.empty()) {
         generateLine("");
-        generateLine("section .rdata align=8");
+        generateLine("section .rodata align=8");
 
         for (auto& kv : floatPool)
             generateLine(kv.first + ": dq " + kv.second);
@@ -169,8 +167,8 @@ void CodeGenerator::generateExpression(Expression* expression) {
         auto* boxLiteral = (BoxLiteral*)(expression);
         const std::size_t bytes = boxLiteral->elements.size() * 16 + 8;   
 
-        generateLine("mov  rcx, " + std::to_string(bytes));        
-        generateLine("call malloc");                               
+        generateLine("mov  rdi, " + std::to_string(bytes));        
+        generateLine("call yox_malloc");                               
         generateLine("mov  rdx, rax");                             
 
         generateLine("mov  rax, " + std::to_string(boxLiteral->elements.size()));
