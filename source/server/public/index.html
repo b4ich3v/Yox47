@@ -102,7 +102,10 @@
             return;
           }
           const parts = [];
-          if (data.result) parts.push(data.result.trimEnd());
+          if (data.result) {
+            const normalized = data.result.replace(/\\n/g, "\n").trimEnd();
+            parts.push(normalized);
+          }
           if (data.stderr) parts.push("\n[stderr]\n" + data.stderr.trimEnd());
           if (data.exitCode) parts.push("\n[exit code] " + data.exitCode);
           output.textContent = parts.join("\\n");
