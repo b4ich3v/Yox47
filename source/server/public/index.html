@@ -24,7 +24,7 @@
       .app {
         height: 100%;
         display: grid;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: auto 1fr 200px;
       }
       .toolbar {
         display: flex;
@@ -63,6 +63,15 @@
         font-size: 14px;
         line-height: 1.5;
       }
+      .output {
+        border-top: 1px solid var(--border);
+        background: #0b1015;
+        color: var(--text);
+        padding: 12px 16px;
+        font-size: 13px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
     </style>
   </head>
   <body>
@@ -71,7 +80,36 @@
         <div class="title">Yox47</div>
         <button class="run-btn" type="button">Run</button>
       </div>
-      <textarea class="editor" spellcheck="false" placeholder="Write your Yox47 code here..."></textarea>
+      <textarea id="editor" class="editor" spellcheck="false" placeholder="Write your Yox47 code here..."></textarea>
+      <div id="output" class="output">Output will appear here...</div>
     </div>
+    <script>
+      const runBtn = document.querySelector(".run-btn");
+      const editor = document.getElementById("editor");
+      const output = document.getElementById("output");
+
+      runBtn.addEventListener("click", async () => {
+        output.textContent = "Running...";
+        try {
+          const res = await fetch("/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: editor.value }),
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            output.textContent = data.error || "Run failed";
+            return;
+          }
+          const parts = [];
+          if (data.result) parts.push(data.result.trimEnd());
+          if (data.stderr) parts.push("\n[stderr]\n" + data.stderr.trimEnd());
+          if (data.exitCode) parts.push("\n[exit code] " + data.exitCode);
+          output.textContent = parts.join("\\n");
+        } catch (err) {
+          output.textContent = String(err);
+        }
+      });
+    </script>
   </body>
 </html>
