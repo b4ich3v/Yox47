@@ -6,9 +6,7 @@
 #include <unordered_map>
 #pragma once
 
-enum class TokenType : uint8_t
-{
-
+enum class TokenType : uint8_t {
     NO_TYPE,
 
     INT,
@@ -60,12 +58,9 @@ enum class TokenType : uint8_t
     RBRACKET,
 
     END_OF_FILE
-
 };
 
-static std::unordered_map<std::string, TokenType> hashedKeywords =
-{
-
+static std::unordered_map<std::string, TokenType> hashedKeywords = {
     {"if", TokenType::KEY_WORD_IF},
     {"else", TokenType::KEY_WORD_ELSE},
     {"function", TokenType::KEY_WORD_FUNCTION},
@@ -83,13 +78,10 @@ static std::unordered_map<std::string, TokenType> hashedKeywords =
     {"choose", TokenType::KEY_WORD_CHOOSE},
     {"case", TokenType::KEY_WORD_CASE},
     {"default", TokenType::KEY_WORD_DEFAULT}
-
 };
 
-struct Token
-{
+struct Token {
 public:
-
     TokenType type = TokenType::NO_TYPE;
     const char* startPtr = nullptr;
     uint32_t length = 0;
@@ -97,15 +89,11 @@ public:
     uint32_t currentColumn = 0;
 
     Token() = default;
-
     Token(TokenType type, const char* start, uint32_t length, uint32_t currentLine, uint32_t currentColumn);
-
 };
 
-class Lexer
-{
+class Lexer {
 private:
-
     const char* beginPtr = nullptr;
     const char* currentPtr = nullptr;
     const char* endPtr = nullptr;
@@ -115,39 +103,25 @@ private:
     uint32_t currentColumn = 1;
 
     char peek();
-
     char peekNext();
-
     char process();
-
     void trim();
-
     bool match(char expectedSymbol);
 
     static bool isAlpha(char ch);
-
     static bool isAlnum(char ch);
-
     static bool isDigit(char ch);
-
     static TokenType keywordMatcher(const std::string& variableId);
 
     Token generateToken(TokenType type, const char* ptr);
-
     Token identifier(const char* ptr);
-
     Token number(const char* ptr);
-
     Token character(const char* ptr);
-
 public:
-
     Lexer(const char* data, size_t len);
 
     Token nextToken();
-
     void tokenize();
-
     static const char* tokenName(TokenType type);
 
 };
