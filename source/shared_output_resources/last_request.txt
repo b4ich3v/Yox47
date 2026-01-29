@@ -1,4 +1,0 @@
-function main() int {
-    print_int(100000);
-    return 0;
-}

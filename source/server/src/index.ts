@@ -40,7 +40,6 @@ app.post("/run", async (request: Request, response: Response): Promise<void> => 
         const outputDir = path.join(projectRoot, "source", "shared_output_resources");
 
         await writeFile(sourcePath, code, "utf8");
-        await writeFile(path.join(outputDir, "last_request.txt"), code, "utf8");
 
         await Promise.all([
             rm(path.join(outputDir, "result.txt"), { force: true }),
