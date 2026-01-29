@@ -9,10 +9,8 @@
 #include <stack>
 #pragma once
 
-class CodeGenerator 
-{
+class CodeGenerator {
 private:
-
     Program* root = nullptr;
     std::ofstream file;
 
@@ -25,17 +23,11 @@ private:
     std::unordered_map<std::string, std::string> floatPool;
     
     bool isFloatExpression(Expression* expression);
-
     static std::string floatLabel(const std::string& txt);
-
     void generateLine(const std::string& text);
-
     void generateProgram(Program* program);
-
     void generateFunction(FunctionDeclaration* functionDeclaration);
-
     void generateStatement(Statement* statement);
-
     void generateExpression(Expression* expression);
 
 public:
@@ -43,9 +35,6 @@ public:
     explicit CodeGenerator(Program* root, const std::string& fileName);
 
     void generate();
-
     static const char* typeTag(NodeType type);
-
     static std::string sanitize(const std::string& str);
-
 };

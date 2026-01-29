@@ -5,28 +5,23 @@
 
 struct Statement : Node { using Node::Node; };
 
-struct ExpressionStatement: public Statement
-{
+struct ExpressionStatement: public Statement {
 public:
 
     std::unique_ptr<Expression> expression;
-
     ExpressionStatement(std::unique_ptr<Expression> expression);
 
 };
 
-struct ReturnStatement: public Statement
-{
+struct ReturnStatement: public Statement {
 public:
 
     std::unique_ptr<Expression> value;
-
     ReturnStatement(std::unique_ptr<Expression> value);
 
 };
 
-struct IfStatement: public Statement
-{
+struct IfStatement: public Statement {
 public:
 
     std::unique_ptr<Expression> condition;
@@ -38,26 +33,22 @@ public:
 
 };
 
-struct BlockStatement: public Statement
-{
+struct BlockStatement: public Statement {
 public:
 
     std::vector<std::unique_ptr<Statement>> statements;
-
     BlockStatement();
 
 };
 
-struct BreakStatement: public Statement
-{
+struct BreakStatement: public Statement {
 public:
 
     BreakStatement();
 
 };
 
-struct WhileStatement: public Statement
-{
+struct WhileStatement: public Statement {
 public:
 
     std::unique_ptr<Expression> condition;
@@ -68,8 +59,7 @@ public:
 
 };
 
-struct ForStatement: public Statement
-{
+struct ForStatement: public Statement {
 public:
 
     std::unique_ptr<Statement> init;
@@ -84,19 +74,16 @@ public:
 
 };
 
-struct CaseClause
-{
+struct CaseClause {
 public:
 
     std::unique_ptr<Expression> test;
     std::unique_ptr<Statement> body;
-
     CaseClause(std::unique_ptr<Expression> test, std::unique_ptr<Statement> body);
 
 };
 
-struct ChooseStatement: public Statement
-{
+struct ChooseStatement: public Statement {
 public:
 
     std::unique_ptr<Expression> expression;

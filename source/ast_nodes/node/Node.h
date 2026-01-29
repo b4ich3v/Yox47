@@ -1,9 +1,7 @@
 #include <iostream>
 #pragma once
 
-enum class NodeType : uint8_t
-{
-   
+enum class NodeType : uint8_t {
     IDENTIFIER,
     INT_LITERAL,
     FLOAT_LITERAL,
@@ -30,17 +28,12 @@ enum class NodeType : uint8_t
     FUNCTION_DECLARATION,
 
     PROGRAM
-
 };
 
-struct Node
-{
+struct Node {
 public:
-
     NodeType type;
-
+    
     explicit Node(NodeType type);
-
     virtual ~Node() = default;
-
 };
