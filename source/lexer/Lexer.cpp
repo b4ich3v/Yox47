@@ -5,7 +5,6 @@ Token::Token(TokenType type, const char* startPtr, uint32_t length, uint32_t cur
 
 Lexer::Lexer(const char* data, size_t len) {
 	if (!data) throw std::logic_error("Invalid pointer data");
-
 	beginPtr = data;
 	currentPtr = data;
 	endPtr = data + len;
@@ -30,7 +29,6 @@ char Lexer::process() {
 
 bool Lexer::match(char expectedSymbol) {
 	if (peek() != expectedSymbol) return false;
-
 	process();
 	return true;
 }
@@ -68,9 +66,7 @@ void Lexer::trim() {
 				}
 				continue;
 			}
-
 			break;
-
 		default: break;
 		}
 		break;
@@ -101,8 +97,12 @@ Token Lexer::nextToken() {
 	case '=': return generateToken(match('=') ? TokenType::EQUAL_EQUAL : TokenType::ASSIGN, tokenStart);
 	case '<': return generateToken(match('=') ? TokenType::LESS_EQUAL : TokenType::LESS, tokenStart);
 	case '>': return generateToken(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER, tokenStart);
-	case '&': return generateToken(match('&') ? TokenType::LOGICAL_AND: TokenType::END_OF_FILE, tokenStart);
-	case '|': return generateToken(match('|') ? TokenType::LOGICAL_OR: TokenType::END_OF_FILE, tokenStart);
+	case '&':
+		if (match('&')) return generateToken(TokenType::LOGICAL_AND, tokenStart);
+		throw std::runtime_error("Unexpected '&'");
+	case '|':
+		if (match('|')) return generateToken(TokenType::LOGICAL_OR, tokenStart);
+		throw std::runtime_error("Unexpected '|'");
 	case ':': return generateToken(TokenType::COLON, tokenStart);
 	case '\'': return character(tokenStart);
 	default:

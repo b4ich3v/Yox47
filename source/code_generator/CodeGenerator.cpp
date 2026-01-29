@@ -276,12 +276,48 @@ void CodeGenerator::generateExpression(Expression* expression) {
     }
     case NodeType::UNARY_EXPRESSION: {
         if (auto* castExpression = dynamic_cast<CastExpression*>(expression)) {
-            generateExpression(castExpression->value.get());      
-
             switch (castExpression->targetType) {
-            case VariableType::Float: generateLine("cvtsi2sd xmm0, rax"); generateLine("movq rax, xmm0"); break;
-            case VariableType::Int: generateLine("movzx rax, al"); break;
+            case VariableType::Float: {
+                if (castExpression->value->type == NodeType::INDEX_EXPRESSION) {
+                    static int idxCastCounter = 0;
+                    int currentId = idxCastCounter++;
+                    std::string labelFloat = ".Lidx_float_" + std::to_string(currentId);
+                    std::string labelDone = ".Lidx_done_" + std::to_string(currentId);
+
+                    auto* indexExpression = (IndexExpression*)castExpression->value.get();
+                    generateExpression(indexExpression->base.get());
+                    generateLine("push rax");
+                    generateExpression(indexExpression->index.get());
+                    generateLine("pop rbx");
+                    generateLine("imul rax, 16");
+                    generateLine("add rbx, 8");
+                    generateLine("add rbx, rax");
+                    generateLine("add rbx, 8");
+                    generateLine("mov rcx, [rbx-8]");
+                    generateLine("cmp rcx, 1");
+                    generateLine("je " + labelFloat);
+                    generateLine("mov rax, [rbx]");
+                    generateLine("cvtsi2sd xmm0, rax");
+                    generateLine("movq rax, xmm0");
+                    generateLine("jmp " + labelDone);
+                    generateLine(labelFloat + ":");
+                    generateLine("movq xmm0, [rbx]");
+                    generateLine("movq rax, xmm0");
+                    generateLine(labelDone + ":");
+                }
+                else {
+                    generateExpression(castExpression->value.get());
+                    generateLine("cvtsi2sd xmm0, rax");
+                    generateLine("movq rax, xmm0");
+                }
+                break;
+            }
+            case VariableType::Int:
+                generateExpression(castExpression->value.get());
+                generateLine("movzx rax, al");
+                break;
             case VariableType::Bool: {
+                generateExpression(castExpression->value.get());
                 if (isFloatExpression(castExpression->value.get())) {
                     generateLine("xorpd xmm1, xmm1");
                     generateLine("ucomisd xmm0, xmm1");
@@ -698,14 +734,20 @@ void CodeGenerator::generateStatement(Statement* statement) {
         }
 
         if (chooseStatement->defaultCase) {
+            generateLine("add rsp, 8");
             generateLine("; default case");
             generateStatement(chooseStatement->defaultCase.get());
+            generateLine("jmp " + endLabel);
+        }
+        else {
+            generateLine("add rsp, 8");
             generateLine("jmp " + endLabel);
         }
 
         for (int i = 0; i < chooseStatement->cases.size(); i++) {
             std::string caseLabel = ".Lcase_" + std::to_string(currentId) + "_" + std::to_string(i);
             generateLine(caseLabel + ":");
+            generateLine("add rsp, 8");
             generateStatement(chooseStatement->cases[i].body.get());
             generateLine("jmp " + endLabel);
 

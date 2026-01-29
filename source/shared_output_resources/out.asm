@@ -206,6 +206,7 @@ pop rcx
 push rcx
 cmp rax, rcx
 je .Lcase_0_0
+add rsp, 8
 ; default case
 sub rsp, 8
 mov rax,63
@@ -218,6 +219,7 @@ call print_newline
 jmp .Lend_choose_0
 jmp .Lend_choose_0
 .Lcase_0_0:
+add rsp, 8
 sub rsp, 8
 mov rax,65
 mov [rbp - 80], rax ; init ch
