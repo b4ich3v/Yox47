@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdint>
 #pragma once
 
 enum class NodeType : uint8_t {

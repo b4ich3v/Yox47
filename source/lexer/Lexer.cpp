@@ -135,7 +135,7 @@ Token Lexer::number(const char* ptr) {
 }
 
 Token Lexer::character(const char* ptr) {
-	if (peek() == '\\\\') { process(); process(); }
+	if (peek() == '\\') { process(); process(); }
 	else process();
 
 	if (peek() != '\'') throw std::runtime_error("unterminated char literal");
