@@ -4,6 +4,7 @@ section .text
 global print_text, print_int, print_float, print_bool, print_char, print_box, print_newline, exit
 global int_to_bool, float_to_bool, bool_to_int, bool_to_float, int_to_float, float_to_int
 global yox_malloc
+global malloc
 
 print_text:
     mov     rax, 1
@@ -307,6 +308,9 @@ yox_malloc:
     mov     rax, 9
     syscall
     ret
+
+malloc:
+    jmp     yox_malloc
 
 section .data
 int_buffer      times 21 db 0
