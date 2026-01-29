@@ -29,7 +29,7 @@ status=0
 echo "${status}" > "${SOURCE_DIR}/exit_code.txt"
 
 if [[ -n "${SHARED_DIR}" ]]; then
-  cp "${SOURCE_DIR}/result.txt" "${SHARED_DIR}/result.txt"
-  cp "${SOURCE_DIR}/stderr.txt" "${SHARED_DIR}/stderr.txt"
-  cp "${SOURCE_DIR}/exit_code.txt" "${SHARED_DIR}/exit_code.txt"
+  cp -f "${SOURCE_DIR}/result.txt" "${SHARED_DIR}/result.txt"
+  cp -f "${SOURCE_DIR}/stderr.txt" "${SHARED_DIR}/stderr.txt"
+  cp -f "${SOURCE_DIR}/exit_code.txt" "${SHARED_DIR}/exit_code.txt"
 fi
