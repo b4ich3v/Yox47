@@ -211,48 +211,48 @@ print_box:
 
 .tag_int:
     mov     rax, [rbx]
-    push    rax
     push    r12
+    push    rax
     call    print_int
-    pop     r12
     add     rsp, 8
+    pop     r12
     jmp     .after
 
 .tag_float:
     movq    xmm0, [rbx]
+    push    r12
     sub     rsp, 8
     movsd   [rsp], xmm0
-    push    r12
     call    print_float
-    pop     r12
     add     rsp, 8
+    pop     r12
     jmp     .after
 
 .tag_bool:
     movzx   rax, byte [rbx]
-    push    rax
     push    r12
+    push    rax
     call    print_bool
-    pop     r12
     add     rsp, 8
+    pop     r12
     jmp     .after
 
 .tag_box:
     mov     rax, [rbx]
-    push    rax
     push    r12
+    push    rax
     call    print_box
-    pop     r12
     add     rsp, 8
+    pop     r12
     jmp     .after
 
 .tag_char:
     movzx   rax, byte [rbx]
-    push    rax
     push    r12
+    push    rax
     call    print_char
-    pop     r12
     add     rsp, 8
+    pop     r12
 
 .after:
     add     rbx, 8
