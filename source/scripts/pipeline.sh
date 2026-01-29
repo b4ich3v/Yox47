@@ -13,7 +13,10 @@ SOURCE_DIR="${SOURCE_DIR:-${SCRIPT_DIR}/..}"
 SHARED_DIR="${SHARED_DIR:-}"
 
 "${SCRIPT_DIR}/build_compiler.sh"
-"${SOURCE_DIR}/yoxc"
+(
+  cd "${SOURCE_DIR}"
+  ./yoxc
+)
 "${SCRIPT_DIR}/build.sh"
 
 if [[ -n "${SHARED_DIR}" ]]; then
