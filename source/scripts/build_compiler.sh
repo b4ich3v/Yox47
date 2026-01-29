@@ -36,7 +36,7 @@ CPP_FILES=(
   "${SOURCE_DIR}/ast_nodes/call_expression_and_variables/CallExpressionAndVariables.cpp"
 )
 
-CXX="${CXX:-g++}"
+CXX="/usr/bin/g++"
 CXXFLAGS="${CXXFLAGS:-}"
 
 "${CXX}" ${CXXFLAGS} -O2 "${INCLUDES[@]}" "${CPP_FILES[@]}" -o "${SOURCE_DIR}/yoxc" -std=gnu++17
