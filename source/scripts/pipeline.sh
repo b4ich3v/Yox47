@@ -21,7 +21,8 @@ SHARED_DIR="${SHARED_DIR:-}"
 
 if [[ -n "${SHARED_DIR}" ]]; then
   mkdir -p "${SHARED_DIR}"
-  cp "${SOURCE_DIR}/out.asm" "${SHARED_DIR}/out.asm"
+  rm -f "${SHARED_DIR}/out.asm"
+  cat "${SOURCE_DIR}/out.asm" > "${SHARED_DIR}/out.asm"
 fi
 
 status=0
@@ -29,7 +30,8 @@ status=0
 echo "${status}" > "${SOURCE_DIR}/exit_code.txt"
 
 if [[ -n "${SHARED_DIR}" ]]; then
-  cp -f "${SOURCE_DIR}/result.txt" "${SHARED_DIR}/result.txt"
-  cp -f "${SOURCE_DIR}/stderr.txt" "${SHARED_DIR}/stderr.txt"
-  cp -f "${SOURCE_DIR}/exit_code.txt" "${SHARED_DIR}/exit_code.txt"
+  rm -f "${SHARED_DIR}/result.txt" "${SHARED_DIR}/stderr.txt" "${SHARED_DIR}/exit_code.txt"
+  cat "${SOURCE_DIR}/result.txt" > "${SHARED_DIR}/result.txt"
+  cat "${SOURCE_DIR}/stderr.txt" > "${SHARED_DIR}/stderr.txt"
+  cat "${SOURCE_DIR}/exit_code.txt" > "${SHARED_DIR}/exit_code.txt"
 fi
