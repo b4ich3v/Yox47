@@ -3,8 +3,7 @@
 
 enum class VariableType: uint8_t { Int, Float, Char, Bool, Box, Void};
 
-struct VariableDeclaration: public Statement
-{
+struct VariableDeclaration: public Statement {
 public:
 
     std::string name;
@@ -16,8 +15,7 @@ public:
 
 };
 
-struct Parameter
-{
+struct Parameter {
 public:
 
     std::string name;
@@ -25,8 +23,7 @@ public:
 
 };
 
-struct CallExpression: public Expression
-{
+struct CallExpression: public Expression {
 public:
 
     std::string callee;
@@ -37,8 +34,7 @@ public:
 
 };
 
-struct CastExpression: public Expression
-{
+struct CastExpression: public Expression {
 public:
 
     VariableType targetType;
