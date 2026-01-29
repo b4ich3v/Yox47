@@ -4,4 +4,4 @@ services:
       context: .
     platform: linux/amd64
     volumes:
-      - ./source/sharedDir:/app/source/sharedDir
+      - ./source/shared_output_resources:/app/source/shared_output_resources
