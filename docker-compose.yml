@@ -1,7 +1,9 @@
 services:
   yox47:
+    container_name: yox47-executor
     build:
       context: .
     platform: linux/amd64
     volumes:
+      - ./source:/app/source
       - ./source/shared_output_resources:/app/source/shared_output_resources

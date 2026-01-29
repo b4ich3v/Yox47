@@ -1,4 +1,6 @@
 function main() int {
-    print_int(100000);
+    int number1 = 2222;
+    int number2 = 3;
+    print_int(number1 + number2);
     return 0;
 }

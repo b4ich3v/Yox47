@@ -10,28 +10,39 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 SOURCE_DIR="${SOURCE_DIR:-${SCRIPT_DIR}/..}"
+ARTIFACTS_DIR="${ARTIFACTS_DIR:-${SOURCE_DIR}/.artifacts}"
 SHARED_DIR="${SHARED_DIR:-}"
+mkdir -p "${ARTIFACTS_DIR}"
+rm -f "${SOURCE_DIR}/out.asm" \
+  "${SOURCE_DIR}/out.o" \
+  "${SOURCE_DIR}/runtime.o" \
+  "${SOURCE_DIR}/program" \
+  "${SOURCE_DIR}/result.txt" \
+  "${SOURCE_DIR}/stderr.txt" \
+  "${SOURCE_DIR}/exit_code.txt" \
+  "${SOURCE_DIR}/yoxc"
 
-"${SCRIPT_DIR}/build_compiler.sh"
+bash "${SCRIPT_DIR}/build_compiler.sh"
 (
-  cd "${SOURCE_DIR}"
+  cp "${SOURCE_DIR}/test.txt" "${ARTIFACTS_DIR}/test.txt"
+  cd "${ARTIFACTS_DIR}"
   ./yoxc
 )
-"${SCRIPT_DIR}/build.sh"
+bash "${SCRIPT_DIR}/build.sh"
 
 if [[ -n "${SHARED_DIR}" ]]; then
   mkdir -p "${SHARED_DIR}"
   rm -f "${SHARED_DIR}/out.asm"
-  cat "${SOURCE_DIR}/out.asm" > "${SHARED_DIR}/out.asm"
+  cat "${ARTIFACTS_DIR}/out.asm" > "${SHARED_DIR}/out.asm"
 fi
 
 status=0
-"${SOURCE_DIR}/program" > "${SOURCE_DIR}/result.txt" 2> "${SOURCE_DIR}/stderr.txt" || status=$?
-echo "${status}" > "${SOURCE_DIR}/exit_code.txt"
+"${ARTIFACTS_DIR}/program" > "${ARTIFACTS_DIR}/result.txt" 2> "${ARTIFACTS_DIR}/stderr.txt" || status=$?
+echo "${status}" > "${ARTIFACTS_DIR}/exit_code.txt"
 
 if [[ -n "${SHARED_DIR}" ]]; then
   rm -f "${SHARED_DIR}/result.txt" "${SHARED_DIR}/stderr.txt" "${SHARED_DIR}/exit_code.txt"
-  cat "${SOURCE_DIR}/result.txt" > "${SHARED_DIR}/result.txt"
-  cat "${SOURCE_DIR}/stderr.txt" > "${SHARED_DIR}/stderr.txt"
-  cat "${SOURCE_DIR}/exit_code.txt" > "${SHARED_DIR}/exit_code.txt"
+  cat "${ARTIFACTS_DIR}/result.txt" > "${SHARED_DIR}/result.txt"
+  cat "${ARTIFACTS_DIR}/stderr.txt" > "${SHARED_DIR}/stderr.txt"
+  cat "${ARTIFACTS_DIR}/exit_code.txt" > "${SHARED_DIR}/exit_code.txt"
 fi

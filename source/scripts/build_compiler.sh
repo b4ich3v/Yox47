@@ -10,6 +10,8 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 SOURCE_DIR="${SOURCE_DIR:-${SCRIPT_DIR}/..}"
+ARTIFACTS_DIR="${ARTIFACTS_DIR:-${SOURCE_DIR}/.artifacts}"
+mkdir -p "${ARTIFACTS_DIR}"
 
 INCLUDES=(
   -I"${SOURCE_DIR}/lexer"
@@ -39,4 +41,4 @@ CPP_FILES=(
 CXX="/usr/bin/g++"
 CXXFLAGS="${CXXFLAGS:-}"
 
-"${CXX}" ${CXXFLAGS} -O2 "${INCLUDES[@]}" "${CPP_FILES[@]}" -o "${SOURCE_DIR}/yoxc" -std=gnu++17
+"${CXX}" ${CXXFLAGS} -O2 "${INCLUDES[@]}" "${CPP_FILES[@]}" -o "${ARTIFACTS_DIR}/yoxc" -std=gnu++17

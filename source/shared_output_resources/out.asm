@@ -14,7 +14,16 @@ main:
 push rbp
 mov rbp, rsp
 push rbx
-mov rax, 100000
+sub rsp, 16
+mov rax, 2222
+mov [rbp - 8], rax ; init number1
+mov rax, 3
+mov [rbp - 16], rax ; init number2
+mov rax, [rbp-16] ; number2
+push rax
+mov rax, [rbp-8] ; number1
+pop rcx
+add rax, rcx
 push rax
 call print_int
 add rsp, 8

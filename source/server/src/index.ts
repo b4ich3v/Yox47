@@ -5,6 +5,7 @@ import { writeFile, readFile, rm } from "fs/promises";
 import { spawn } from "child_process";
 
 const PORT: number = 8000;
+const CONTAINER_NAME = "yox47-executor";
 const app: Express = express();
 
 app.use(express.json({ limit: "1mb" }));
@@ -21,6 +22,17 @@ function runCompose(projectRoot: string, args: string[]): Promise<number> {
     return new Promise((resolve, reject) => {
         const composeFile = path.join(projectRoot, "docker-compose.yml");
         const child = spawn("docker", ["compose", "-f", composeFile, ...args], {
+            cwd: projectRoot,
+            stdio: "inherit",
+        });
+        child.on("error", reject);
+        child.on("close", (code) => resolve(code ?? 1));
+    });
+}
+
+function runDockerExec(projectRoot: string, args: string[]): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const child = spawn("docker", ["exec", CONTAINER_NAME, ...args], {
             cwd: projectRoot,
             stdio: "inherit",
         });
@@ -48,8 +60,10 @@ app.post("/run", async (request: Request, response: Response): Promise<void> => 
             rm(path.join(outputDir, "out.asm"), { force: true }),
         ]);
 
-        await runCompose(projectRoot, ["build"]);
-        await runCompose(projectRoot, ["run", "--rm", "yox47"]);
+        const execCode = await runDockerExec(projectRoot, ["bash", "-lc", "bash /app/source/scripts/pipeline.sh"]);
+        if (execCode !== 0) {
+            console.warn(`pipeline.sh exited with code ${execCode}`);
+        }
 
         const resultPath = path.join(outputDir, "result.txt");
         const stderrPath = path.join(outputDir, "stderr.txt");
@@ -72,4 +86,36 @@ app.post("/run", async (request: Request, response: Response): Promise<void> => 
     }
 });
 
-app.listen(PORT, listenHandler);
+async function startServer(): Promise<void> {
+    const projectRoot = path.resolve(__dirname, "..", "..", "..");
+    const buildCode = await runCompose(projectRoot, ["build"]);
+    if (buildCode !== 0) {
+        console.error("docker compose build failed");
+        process.exit(1);
+    }
+    const upCode = await runCompose(projectRoot, ["up", "-d"]);
+    if (upCode !== 0) {
+        console.error("docker compose up failed");
+        process.exit(1);
+    }
+
+    app.listen(PORT, listenHandler);
+}
+
+async function stopContainer(): Promise<void> {
+    const projectRoot = path.resolve(__dirname, "..", "..", "..");
+    await runCompose(projectRoot, ["down"]);
+}
+
+process.on("SIGINT", () => {
+    stopContainer().finally(() => process.exit(0));
+});
+
+process.on("SIGTERM", () => {
+    stopContainer().finally(() => process.exit(0));
+});
+
+startServer().catch((err) => {
+    console.error(err);
+    process.exit(1);
+});

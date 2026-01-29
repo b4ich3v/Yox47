@@ -10,7 +10,9 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 SOURCE_DIR="${SOURCE_DIR:-${SCRIPT_DIR}/..}"
+ARTIFACTS_DIR="${ARTIFACTS_DIR:-${SOURCE_DIR}/.artifacts}"
+mkdir -p "${ARTIFACTS_DIR}"
 
-nasm -f elf64 "${SOURCE_DIR}/runtime.asm" -o "${SOURCE_DIR}/runtime.o"
-nasm -f elf64 "${SOURCE_DIR}/out.asm" -o "${SOURCE_DIR}/out.o"
-ld -o "${SOURCE_DIR}/program" "${SOURCE_DIR}/out.o" "${SOURCE_DIR}/runtime.o"
+nasm -f elf64 "${SOURCE_DIR}/runtime.asm" -o "${ARTIFACTS_DIR}/runtime.o"
+nasm -f elf64 "${ARTIFACTS_DIR}/out.asm" -o "${ARTIFACTS_DIR}/out.o"
+ld -o "${ARTIFACTS_DIR}/program" "${ARTIFACTS_DIR}/out.o" "${ARTIFACTS_DIR}/runtime.o"
