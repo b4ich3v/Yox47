@@ -24,6 +24,32 @@ std::string CodeGenerator::floatLabel(const std::string& text) {
 CodeGenerator::CodeGenerator(Program* root, const std::string& fileName): 
     root(root), file(fileName) {}
 
+void CodeGenerator::enterScope() {
+    localOffsetScopes.emplace_back();
+    varTypeScopes.emplace_back();
+}
+
+void CodeGenerator::leaveScope() {
+    localOffsetScopes.pop_back();
+    varTypeScopes.pop_back();
+}
+
+int CodeGenerator::findLocalOffset(const std::string& name) const {
+    for (auto iter = localOffsetScopes.rbegin(); iter != localOffsetScopes.rend(); ++iter) {
+        auto found = iter->find(name);
+        if (found != iter->end()) return found->second;
+    }
+    return 0;
+}
+
+VariableType CodeGenerator::findVarType(const std::string& name) const {
+    for (auto iter = varTypeScopes.rbegin(); iter != varTypeScopes.rend(); ++iter) {
+        auto found = iter->find(name);
+        if (found != iter->end()) return found->second;
+    }
+    return VariableType::Int;
+}
+
 bool CodeGenerator::isFloatExpression(Expression* expression) {
     switch (expression->type) {
     case NodeType::FLOAT_LITERAL: return true;
@@ -32,8 +58,7 @@ bool CodeGenerator::isFloatExpression(Expression* expression) {
     case NodeType::BOOL_LITERAL: return false;
     case NodeType::IDENTIFIER: {      
         auto id = (IdentifierExpression*)(expression);
-        auto iter = varTypes.find(id->name);
-        return iter != varTypes.end() && iter->second == VariableType::Float;
+        return findVarType(id->name) == VariableType::Float;
     }
     case NodeType::UNARY_EXPRESSION: {
         if (auto castExpression = dynamic_cast<CastExpression*>(expression))
@@ -108,6 +133,9 @@ void CodeGenerator::generate() {
 
 void CodeGenerator::generateProgram(Program* program) {
     for (auto& currentFunction : program->functions)
+        fnReturnTypes[currentFunction->name] = currentFunction->returnType;
+
+    for (auto& currentFunction : program->functions)
         generateFunction(currentFunction.get());
 }
 
@@ -172,10 +200,10 @@ void CodeGenerator::generateExpression(Expression* expression) {
     }
     case NodeType::IDENTIFIER: {
         auto* id = (IdentifierExpression*)expression;
-        int off = localOffsets[id->name];
+        int off = findLocalOffset(id->name);
         generateLine("mov rax, [rbp-" + std::to_string(off) + "] ; " + id->name);
 
-        if (varTypes[id->name] == VariableType::Float)
+        if (findVarType(id->name) == VariableType::Float)
             generateLine("movq xmm0, rax");
 
         break;
@@ -217,7 +245,15 @@ void CodeGenerator::generateExpression(Expression* expression) {
             generateLine("movzx rax, al");
         }
         else if (unaryExpression->oper == TokenType::MINUS) {           
-            generateLine("neg rax");
+            if (isFloatExpression(unaryExpression->operand.get())) {
+                generateLine("xorpd xmm1, xmm1");
+                generateLine("subsd xmm1, xmm0");
+                generateLine("movq xmm0, xmm1");
+                generateLine("movq rax, xmm0");
+            }
+            else {
+                generateLine("neg rax");
+            }
 
         }
         break;
@@ -367,7 +403,7 @@ void CodeGenerator::generateExpression(Expression* expression) {
 
         if (assignmentExpression->target->type == NodeType::IDENTIFIER) {
             auto* id = (IdentifierExpression*)assignmentExpression->target.get();
-            int currentOffset = localOffsets[id->name];
+            int currentOffset = findLocalOffset(id->name);
             generateLine("mov [rbp-" + std::to_string(currentOffset) + "], rax ; assign " + id->name);
         }
         else {
@@ -390,10 +426,10 @@ void CodeGenerator::generateExpression(Expression* expression) {
 }
 
 void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration) {
-    fnReturnTypes[functionDeclaration->name] = functionDeclaration->returnType;
-
-    localOffsets.clear();
+    localOffsetScopes.clear();
+    varTypeScopes.clear();
     currentStackOffset = 0;
+    enterScope();
 
     generateLine(functionDeclaration->name + ":");
     generateLine("push rbp");
@@ -404,8 +440,8 @@ void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration) {
 
     for (auto& currentParam : functionDeclaration->parameters) {
         currentStackOffset += 8;
-        localOffsets[currentParam.name] = currentStackOffset;
-        varTypes[currentParam.name] = currentParam.type;
+        localOffsetScopes.back()[currentParam.name] = currentStackOffset;
+        varTypeScopes.back()[currentParam.name] = currentParam.type;
 
         generateLine("sub rsp, 8");
         generateLine("mov rax, [rbp+" + std::to_string(argOffset) + "]");
@@ -426,16 +462,17 @@ void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration) {
     generateLine("pop rbp");
     generateLine("ret");
     generateLine("");
+    leaveScope();
 }
 
 void CodeGenerator::generateStatement(Statement* statement) {
     switch (statement->type) {
     case NodeType::VARIABLE_DECLARATION: {
         auto variableDeclaration = (VariableDeclaration*)(statement);
-        varTypes[variableDeclaration->name] = variableDeclaration->type;
+        varTypeScopes.back()[variableDeclaration->name] = variableDeclaration->type;
 
         currentStackOffset += 8;
-        localOffsets[variableDeclaration->name] = currentStackOffset;
+        localOffsetScopes.back()[variableDeclaration->name] = currentStackOffset;
         generateLine("sub rsp, 8");
         
         if (variableDeclaration->init) {
@@ -464,10 +501,12 @@ void CodeGenerator::generateStatement(Statement* statement) {
     }
     case NodeType::BLOCK_STATEMENT: {
         auto blockStatement = (BlockStatement*)(statement);
+        enterScope();
 
         for (auto& currentStatement : blockStatement->statements)
             generateStatement(currentStatement.get());
 
+        leaveScope();
         break;
     }
     case NodeType::BREAK_STATEMENT: {
@@ -567,6 +606,7 @@ void CodeGenerator::generateStatement(Statement* statement) {
         chooseCounter += 1;
 
         std::string endLabel = ".Lend_choose_" + std::to_string(currentId);
+        breakLabels.push(endLabel);
 
         generateExpression(chooseStatement->expression.get());
         generateLine("push rax ; value to match");
@@ -595,6 +635,7 @@ void CodeGenerator::generateStatement(Statement* statement) {
         }
 
         generateLine(endLabel + ":");
+        breakLabels.pop();
         break;
     }
     default:  generateLine("; TODO!!!"); break;

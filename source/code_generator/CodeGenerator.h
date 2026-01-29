@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <stack>
+#include <vector>
 #pragma once
 
 class CodeGenerator {
@@ -14,15 +15,19 @@ private:
     Program* root = nullptr;
     std::ofstream file;
 
-    std::unordered_map<std::string, VariableType> varTypes;
+    std::vector<std::unordered_map<std::string, VariableType>> varTypeScopes;
     std::unordered_map<std::string, VariableType> fnReturnTypes;
     int currentStackOffset;
 
     std::stack<std::string> breakLabels;
-    std::unordered_map<std::string, int> localOffsets;
+    std::vector<std::unordered_map<std::string, int>> localOffsetScopes;
     std::unordered_map<std::string, std::string> floatPool;
     
     bool isFloatExpression(Expression* expression);
+    int findLocalOffset(const std::string& name) const;
+    VariableType findVarType(const std::string& name) const;
+    void enterScope();
+    void leaveScope();
     static std::string floatLabel(const std::string& txt);
     void generateLine(const std::string& text);
     void generateProgram(Program* program);
