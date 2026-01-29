@@ -1,0 +1,7 @@
+services:
+  yox47:
+    build:
+      context: .
+    platform: linux/amd64
+    volumes:
+      - ./source/sharedDir:/app/source/sharedDir
