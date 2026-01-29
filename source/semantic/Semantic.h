@@ -29,6 +29,11 @@ public:
 class SemanticChecker {
 private:
     ScopedSymbolTable symbols;
+    struct FunctionInfo {
+        VariableType returnType;
+        std::vector<VariableType> paramTypes;
+    };
+    std::unordered_map<std::string, FunctionInfo> functions;
     std::optional<VariableType> currentReturnType;
     int loopDepth = 0;
     int chooseDepth = 0;
@@ -49,6 +54,7 @@ private:
     void visit(BoxLiteral* boxLiteral);
     void visit(IndexExpression* indexExpression);
     void visit(CallExpression* callExpression);
+    void visit(CastExpression* castExpression);
     void visit(UnaryExpression* unaryExpression);
     void visit(BinaryExpression* binaryExpression);
     void visit(ChooseStatement* chooseStatement);

@@ -52,6 +52,22 @@ void Lexer::trim() {
 				while (peek() != '\n' && peek() != '\0') process();
 				continue;
 			}
+			if (peekNext() == '*') {
+				process();
+				process();
+
+				while (true) {
+					if (peek() == '\0')
+						throw std::runtime_error("unterminated block comment");
+					if (peek() == '*' && peekNext() == '/') {
+						process();
+						process();
+						break;
+					}
+					process();
+				}
+				continue;
+			}
 
 			break;
 
