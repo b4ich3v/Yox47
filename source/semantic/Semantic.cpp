@@ -205,6 +205,10 @@ void SemanticChecker::visit(AssignmentExpression* assignmentExpression) {
     VariableType right = evaluateType(assignmentExpression->value.get());
     VariableType left;
 
+    if (assignmentExpression->target->type == NodeType::INDEX_EXPRESSION) {
+        visit(assignmentExpression->target.get());
+        return;
+    }
     if (assignmentExpression->target->type == NodeType::IDENTIFIER) {
         auto id = (IdentifierExpression*)assignmentExpression->target.get();
         const VariableInfo* variable = symbols.findVariable(id->name);

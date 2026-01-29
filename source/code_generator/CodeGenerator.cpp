@@ -145,6 +145,48 @@ VariableType CodeGenerator::expressionValueType(Expression* expression) const {
     }
 }
 
+int CodeGenerator::countVarDeclsInStatement(Statement* statement) const {
+    switch (statement->type) {
+    case NodeType::VARIABLE_DECLARATION:
+        return 1;
+    case NodeType::BLOCK_STATEMENT: {
+        int total = 0;
+        auto* block = (BlockStatement*)statement;
+        for (auto& st : block->statements)
+            total += countVarDeclsInStatement(st.get());
+        return total;
+    }
+    case NodeType::IF_STATEMENT: {
+        auto* ifStmt = (IfStatement*)statement;
+        int total = countVarDeclsInStatement(ifStmt->thenConsequence.get());
+        if (ifStmt->elseConsequence) total += countVarDeclsInStatement(ifStmt->elseConsequence.get());
+        return total;
+    }
+    case NodeType::WHILE_STATEMENT: {
+        auto* whileStmt = (WhileStatement*)statement;
+        return countVarDeclsInStatement(whileStmt->body.get());
+    }
+    case NodeType::FOR_STATEMENT: {
+        auto* forStmt = (ForStatement*)statement;
+        int total = 0;
+        if (forStmt->init) total += countVarDeclsInStatement(forStmt->init.get());
+        total += countVarDeclsInStatement(forStmt->body.get());
+        return total;
+    }
+    case NodeType::CHOOSE_STATEMENT: {
+        auto* chooseStmt = (ChooseStatement*)statement;
+        int total = 0;
+        for (auto& c : chooseStmt->cases)
+            total += countVarDeclsInStatement(c.body.get());
+        if (chooseStmt->defaultCase)
+            total += countVarDeclsInStatement(chooseStmt->defaultCase.get());
+        return total;
+    }
+    default:
+        return 0;
+    }
+}
+
 void CodeGenerator::generateLine(const std::string& text) {
     file << text << std::endl;
 }
@@ -500,14 +542,16 @@ void CodeGenerator::generateExpression(Expression* expression) {
     case NodeType::ASSIGNMENT_EXPRESSION: {
         auto* assignmentExpression = (AssignmentExpression*)expression;
 
-        generateExpression(assignmentExpression->value.get());
-
         if (assignmentExpression->target->type == NodeType::IDENTIFIER) {
+            generateExpression(assignmentExpression->value.get());
             auto* id = (IdentifierExpression*)assignmentExpression->target.get();
             int currentOffset = findLocalOffset(id->name);
             generateLine("mov [rbp-" + std::to_string(currentOffset) + "], rax ; assign " + id->name);
         }
         else {
+            generateExpression(assignmentExpression->value.get());
+            VariableType valueType = expressionValueType(assignmentExpression->value.get());
+            generateLine("push rax");
             auto* indexExpression = (IndexExpression*)assignmentExpression->target.get();
             
             generateExpression(indexExpression->base.get());        
@@ -518,18 +562,22 @@ void CodeGenerator::generateExpression(Expression* expression) {
             generateLine("add rbx, 8");
             generateLine("add rbx, rax");
             generateLine("add rbx, 8");
-            {
-                VariableType valueType = expressionValueType(assignmentExpression->value.get());
-                const char* tag = "0";
-                switch (valueType) {
-                case VariableType::Int: tag = "0"; break;
-                case VariableType::Float: tag = "1"; break;
-                case VariableType::Bool: tag = "2"; break;
-                case VariableType::Box: tag = "3"; break;
-                case VariableType::Char: tag = "4"; break;
-                default: tag = "0"; break;
-                }
-                generateLine(std::string("mov qword [rbx-8], ") + tag);
+            const char* tag = "0";
+            switch (valueType) {
+            case VariableType::Int: tag = "0"; break;
+            case VariableType::Float: tag = "1"; break;
+            case VariableType::Bool: tag = "2"; break;
+            case VariableType::Box: tag = "3"; break;
+            case VariableType::Char: tag = "4"; break;
+            default: tag = "0"; break;
+            }
+            generateLine(std::string("mov qword [rbx-8], ") + tag);
+            generateLine("pop rax");
+            if (valueType == VariableType::Float) {
+                generateLine("movq xmm0, rax");
+                generateLine("movq [rbx], xmm0");
+            }
+            else {
                 generateLine("mov [rbx], rax");
             }
         }
@@ -550,6 +598,12 @@ void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration) {
     generateLine("push rbp");
     generateLine("mov rbp, rsp");
     generateLine("push rbx");               
+    {
+        int localCount = countVarDeclsInStatement(functionDeclaration->body.get());
+        int frameSlots = (int)functionDeclaration->parameters.size() + localCount;
+        if (frameSlots > 0)
+            generateLine("sub rsp, " + std::to_string(frameSlots * 8));
+    }
 
     int argOffset = 16;   
 
@@ -558,7 +612,6 @@ void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration) {
         localOffsetScopes.back()[currentParam.name] = currentStackOffset;
         varTypeScopes.back()[currentParam.name] = currentParam.type;
 
-        generateLine("sub rsp, 8");
         generateLine("mov rax, [rbp+" + std::to_string(argOffset) + "]");
         generateLine("mov [rbp-" + std::to_string(currentStackOffset) +
             "], rax ; param " + currentParam.name);
@@ -588,7 +641,6 @@ void CodeGenerator::generateStatement(Statement* statement) {
 
         currentStackOffset += 8;
         localOffsetScopes.back()[variableDeclaration->name] = currentStackOffset;
-        generateLine("sub rsp, 8");
         
         if (variableDeclaration->init) {
             generateExpression(variableDeclaration->init.get());

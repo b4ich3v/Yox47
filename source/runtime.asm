@@ -178,6 +178,7 @@ print_box:
     push    rbp
     mov     rbp, rsp
     push    rbx
+    push    r12
     sub     rsp, 8
 
     mov     rbx, [rbp+16]
@@ -186,11 +187,11 @@ print_box:
     mov     rsi, 1
     call    print_text
 
-    mov     rcx, [rbx]
+    mov     r12, [rbx]
     add     rbx, 8
 
 .loop:
-    test    rcx, rcx
+    test    r12, r12
     jz      .end
 
     mov     rax, [rbx]
@@ -211,7 +212,9 @@ print_box:
 .tag_int:
     mov     rax, [rbx]
     push    rax
+    push    r12
     call    print_int
+    pop     r12
     add     rsp, 8
     jmp     .after
 
@@ -219,46 +222,59 @@ print_box:
     movq    xmm0, [rbx]
     sub     rsp, 8
     movsd   [rsp], xmm0
+    push    r12
     call    print_float
+    pop     r12
     add     rsp, 8
     jmp     .after
 
 .tag_bool:
     movzx   rax, byte [rbx]
     push    rax
+    push    r12
     call    print_bool
+    pop     r12
     add     rsp, 8
     jmp     .after
 
 .tag_box:
     mov     rax, [rbx]
     push    rax
+    push    r12
     call    print_box
+    pop     r12
     add     rsp, 8
     jmp     .after
 
 .tag_char:
     movzx   rax, byte [rbx]
     push    rax
+    push    r12
     call    print_char
+    pop     r12
     add     rsp, 8
 
 .after:
     add     rbx, 8
-    dec     rcx
+    dec     r12
     jz      .skip_sep
     lea     rdi, [rel separator_fmt]
     mov     rsi, 2
+    push    r12
     call    print_text
+    pop     r12
 .skip_sep:
     jmp     .loop
 
 .end:
     lea     rdi, [rel box_close_fmt]
     mov     rsi, 2
+    push    r12
     call    print_text
+    pop     r12
 
     add     rsp, 8
+    pop     r12
     pop     rbx
     pop     rbp
     ret

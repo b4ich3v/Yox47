@@ -2,6 +2,16 @@ function square(n: int) int {
     return n * n;
 }
 
+function max2(a: int, b: int) int {
+    if (a > b) return a;
+    return b;
+}
+
+function fib(n: int) int {
+    if (n <= 1) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+
 function sumBox(b: box, len: int) int {
     int s = 0;
     for (int i = 0; i < len; i = i + 1) {
@@ -11,26 +21,46 @@ function sumBox(b: box, len: int) int {
 }
 
 function main() int {
-
+    // basic int + function call
     int a = 7;
     int sq = square(a);
     print_int(sq);
     print_newline();
 
+    // float arithmetic + unary minus
     float x = 3.14;
     float y = 2.0;
     float z = x * y;
+    float neg = -z;
     print_float(z);
     print_newline();
-
-    box arr[5] = { 1, 2, 3, 4, 5 };
-    int len = 5;
+    print_float(neg);
     print_newline();
 
+    // bool logic + comparisons
+    bool b1 = (a > 3) && (a < 10);
+    bool b2 = !b1 || (a == 0);
+    print_bool(b1);
+    print_newline();
+    print_bool(b2);
+    print_newline();
+
+    // box literal + print_box
+    box arr[5] = { 1, 2, 3, 4, 5 };
+    print_box(arr);
+    print_newline();
+
+    int len = 5;
     int total = sumBox(arr, len);
     print_int(total);
     print_newline();
 
+    // index assignment updates tag/value
+    arr[1] = 42;
+    print_box(arr);
+    print_newline();
+
+    // choose with default + break
     choose(arr[2]) {
         case 10: {
             char ch = 'A';
@@ -46,12 +76,54 @@ function main() int {
         }
     }
 
-    bool flag = total > 10;
-    print_bool(flag);
+    // choose without default (stack cleanup)
+    choose(a) {
+        case 99: {
+            print_int(99);
+            print_newline();
+            break;
+        }
+        case 100: {
+            print_int(100);
+            print_newline();
+            break;
+        }
+    }
+
+    // while + break
+    int i = 0;
+    int acc = 0;
+    while (i < 10) {
+        acc = acc + i;
+        if (i == 5) break;
+        i = i + 1;
+    }
+    print_int(acc);
     print_newline();
 
+    // for + shadowing
+    int sum = 0;
+    for (int j = 0; j < 5; j = j + 1) {
+        int sum = j * 2;
+        print_int(sum);
+        print_newline();
+    }
+    print_int(sum);
+    print_newline();
+
+    // recursion
+    int f = fib(8);
+    print_int(f);
+    print_newline();
+
+    // char
     char c = 'X';
     print_char(c);
+    print_newline();
+
+    // max2
+    int m = max2(3, 9);
+    print_int(m);
     print_newline();
 
     return 0;
