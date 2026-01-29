@@ -24,6 +24,7 @@ private:
     std::unordered_map<std::string, std::string> floatPool;
     
     bool isFloatExpression(Expression* expression);
+    VariableType expressionValueType(Expression* expression) const;
     int findLocalOffset(const std::string& name) const;
     VariableType findVarType(const std::string& name) const;
     void enterScope();

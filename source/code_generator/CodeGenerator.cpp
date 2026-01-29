@@ -87,6 +87,64 @@ bool CodeGenerator::isFloatExpression(Expression* expression) {
     }
 }
 
+VariableType CodeGenerator::expressionValueType(Expression* expression) const {
+    switch (expression->type) {
+    case NodeType::INT_LITERAL: return VariableType::Int;
+    case NodeType::FLOAT_LITERAL: return VariableType::Float;
+    case NodeType::CHAR_LITERAL: return VariableType::Char;
+    case NodeType::BOOL_LITERAL: return VariableType::Bool;
+    case NodeType::BOX_LITERAL: return VariableType::Box;
+    case NodeType::IDENTIFIER: {
+        auto id = (IdentifierExpression*)(expression);
+        return findVarType(id->name);
+    }
+    case NodeType::UNARY_EXPRESSION: {
+        if (auto castExpression = dynamic_cast<CastExpression*>(expression))
+            return castExpression->targetType;
+
+        auto unaryExpression = (UnaryExpression*)(expression);
+        if (unaryExpression->oper == TokenType::NEGATION) return VariableType::Bool;
+        return expressionValueType(unaryExpression->operand.get());
+    }
+    case NodeType::ASSIGNMENT_EXPRESSION: {
+        auto assignmentExpression = (AssignmentExpression*)(expression);
+        return expressionValueType(assignmentExpression->value.get());
+    }
+    case NodeType::BINARY_EXPRESSION: {
+        auto binaryExpression = (BinaryExpression*)(expression);
+        VariableType left = expressionValueType(binaryExpression->left.get());
+        VariableType right = expressionValueType(binaryExpression->right.get());
+        switch (binaryExpression->oper) {
+        case TokenType::LOGICAL_AND:
+        case TokenType::LOGICAL_OR:
+        case TokenType::EQUAL_EQUAL:
+        case TokenType::NOT_EQUAL:
+        case TokenType::LESS:
+        case TokenType::LESS_EQUAL:
+        case TokenType::GREATER:
+        case TokenType::GREATER_EQUAL:
+            return VariableType::Bool;
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::STAR:
+        case TokenType::SLASH:
+            return (left == VariableType::Float || right == VariableType::Float) ? VariableType::Float : VariableType::Int;
+        default:
+            return VariableType::Int;
+        }
+    }
+    case NodeType::CALL_EXPRESSION: {
+        auto callExpression = (CallExpression*)(expression);
+        auto iter = fnReturnTypes.find(callExpression->callee);
+        return iter != fnReturnTypes.end() ? iter->second : VariableType::Int;
+    }
+    case NodeType::INDEX_EXPRESSION:
+        return VariableType::Int;
+    default:
+        return VariableType::Int;
+    }
+}
+
 void CodeGenerator::generateLine(const std::string& text) {
     file << text << std::endl;
 }
@@ -177,8 +235,18 @@ void CodeGenerator::generateExpression(Expression* expression) {
 
         for (auto& elemUP : boxLiteral->elements) {
             Expression* element = elemUP.get();
+            VariableType elementType = expressionValueType(element);
+            const char* tag = "0";
+            switch (elementType) {
+            case VariableType::Int: tag = "0"; break;
+            case VariableType::Float: tag = "1"; break;
+            case VariableType::Bool: tag = "2"; break;
+            case VariableType::Box: tag = "3"; break;
+            case VariableType::Char: tag = "4"; break;
+            default: tag = "0"; break;
+            }
 
-            generateLine(std::string("mov qword [rbx], ") + typeTag(element->type));
+            generateLine(std::string("mov qword [rbx], ") + tag);
             generateLine("add rbx, 8");       
 
             generateLine("push rbx");         
@@ -214,19 +282,16 @@ void CodeGenerator::generateExpression(Expression* expression) {
             case VariableType::Float: generateLine("cvtsi2sd xmm0, rax"); generateLine("movq rax, xmm0"); break;
             case VariableType::Int: generateLine("movzx rax, al"); break;
             case VariableType::Bool: {
-                NodeType source = castExpression->value->type;
-
-                if (source == NodeType::INT_LITERAL || source == NodeType::IDENTIFIER) {   
-                    generateLine("cmp rax, 0");
+                if (isFloatExpression(castExpression->value.get())) {
+                    generateLine("xorpd xmm1, xmm1");
+                    generateLine("ucomisd xmm0, xmm1");
                     generateLine("setne al");
                     generateLine("movzx rax, al");
                 }
-                else { 
-                    generateLine("sub rsp, 8");       
-                    generateLine("push rax");         
-                    generateLine("call float_to_bool");
-                    generateLine("add rsp, 8");       
-                    generateLine("mov rax, [rsp]");   
+                else {
+                    generateLine("cmp rax, 0");
+                    generateLine("setne al");
+                    generateLine("movzx rax, al");
                 }
                 break;
             }
@@ -415,7 +480,20 @@ void CodeGenerator::generateExpression(Expression* expression) {
             generateLine("add rbx, 8");
             generateLine("add rbx, rax");
             generateLine("add rbx, 8");
-            generateLine("mov [rbx], rax");
+            {
+                VariableType valueType = expressionValueType(assignmentExpression->value.get());
+                const char* tag = "0";
+                switch (valueType) {
+                case VariableType::Int: tag = "0"; break;
+                case VariableType::Float: tag = "1"; break;
+                case VariableType::Bool: tag = "2"; break;
+                case VariableType::Box: tag = "3"; break;
+                case VariableType::Char: tag = "4"; break;
+                default: tag = "0"; break;
+                }
+                generateLine(std::string("mov qword [rbx-8], ") + tag);
+                generateLine("mov [rbx], rax");
+            }
         }
         break;
     }
@@ -427,6 +505,7 @@ void CodeGenerator::generateFunction(FunctionDeclaration* functionDeclaration) {
     localOffsetScopes.clear();
     varTypeScopes.clear();
     currentStackOffset = 0;
+    while (!breakLabels.empty()) breakLabels.pop();
     enterScope();
 
     generateLine(functionDeclaration->name + ":");
